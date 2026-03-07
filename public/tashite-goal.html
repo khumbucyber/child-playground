@@ -196,18 +196,21 @@ body {
   aspect-ratio: 1;
   border-radius: 18px;
   border: none;
-  font-size: 30px;
   font-weight: 900;
   color: #3a2060;
   background: white;
   box-shadow: 0 5px 0 rgba(80,50,140,0.22);
   cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   transition: transform 0.12s, box-shadow 0.12s, background 0.15s;
   touch-action: manipulation;
   position: relative;
+  padding: 4px 2px;
+  overflow: hidden;
 }
 .num-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(80,50,140,0.18); }
 
@@ -228,10 +231,18 @@ body {
   pointer-events: none;
 }
 
-.num-btn .check-mark {
-  position: absolute;
-  top: 4px; right: 6px;
-  font-size: 14px;
+.num-btn .btn-number {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.num-btn .btn-animals {
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  word-break: break-all;
+  max-width: 100%;
+  letter-spacing: -1px;
 }
 
 /* ─ Action buttons ─ */
@@ -400,6 +411,11 @@ let score = 0;
 let qNum = 1;
 let confettiParticles = [];
 let cfRaf = null;
+let currentAnimal = '🐶';
+
+// 問題ごとにランダムに動物を選ぶ（Lv1/2のみ使用）
+const ANIMALS = ['🐶','🐱','🐰','🐻','🐼','🐨','🐸','🐧','🐤','🦊','🐮','🐷'];
+const ANIMAL_SHOW_MAX = 5; // これ以下の数字のみ絵文字を表示
 
 // ── Level config ───────────────────────────────────────────
 const LEVEL = {
@@ -499,6 +515,7 @@ let currentQ = null;
 
 function newQuestion() {
   selected = [];
+  currentAnimal = ANIMALS[rnd(0, ANIMALS.length - 1)];
   const cfg = LEVEL[currentLevel];
   const q = cfg.gen();
   currentQ = q;
@@ -543,11 +560,25 @@ function renderGrid() {
   const grid = document.getElementById('numGrid');
   grid.className = `num-grid cols${cfg.cols === 4 ? '4' : '3'}`;
   grid.innerHTML = '';
+  // Lv1/2のみ動物を表示、かつ数が ANIMAL_SHOW_MAX 以下のパネルのみ
+  const showAnimals = currentLevel <= 2;
   numbers.forEach((n, i) => {
     const btn = document.createElement('button');
     btn.className = 'num-btn';
     btn.dataset.index = i;
-    btn.textContent = n;
+
+    const numSpan = document.createElement('span');
+    numSpan.className = 'btn-number';
+    numSpan.textContent = n;
+    btn.appendChild(numSpan);
+
+    if (showAnimals && n <= ANIMAL_SHOW_MAX) {
+      const animalSpan = document.createElement('span');
+      animalSpan.className = 'btn-animals';
+      animalSpan.textContent = currentAnimal.repeat(n);
+      btn.appendChild(animalSpan);
+    }
+
     btn.addEventListener('click', () => toggleNum(i));
     grid.appendChild(btn);
   });
@@ -556,7 +587,12 @@ function renderGrid() {
 function renderSum() {
   const el = document.getElementById('sumDisplay');
   if (selected.length === 0) {
-    el.textContent = '—';
+    const q = currentQ;
+    const op = q.isSubtract ? '−' : q.isMultiply ? '×' : '+';
+    const slots = Array(q.needCount).fill('?').join(` ${op} `);
+    el.textContent = `${slots} = ${goal}`;
+    el.style.color = '#9a7aba';
+    el.style.background = 'rgba(255,255,255,0.8)';
     return;
   }
   const vals = selected.map(i => numbers[i]);
