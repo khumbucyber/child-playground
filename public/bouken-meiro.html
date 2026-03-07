@@ -145,7 +145,7 @@ body {
 .cbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(80,50,140,0.2); }
 .cbtn.empty { background: transparent; box-shadow: none; pointer-events: none; }
 
-/* ─ Popup ─ */
+/* ─ Overlay（キャラ選択・ポップアップ共通） ─ */
 .overlay {
   position: fixed; inset: 0;
   background: rgba(60,30,100,0.6);
@@ -187,12 +187,38 @@ body {
   box-shadow: 0 6px 18px rgba(240,96,144,0.5);
   width: 100%;
   letter-spacing: 1px;
+  touch-action: manipulation;
 }
 .pbtn.restart {
   background: linear-gradient(135deg, #43c664, #4d96ff);
   box-shadow: 0 6px 18px rgba(67,198,100,0.45);
   margin-top: 10px;
 }
+
+/* ─ キャラ選択ボタン ─ */
+.chara-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.chara-btn {
+  flex: 1;
+  border: 3px solid transparent;
+  border-radius: 20px;
+  background: #f5f0ff;
+  padding: 12px 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s, border-color 0.15s;
+  font-size: 13px;
+  font-weight: 900;
+  color: #5a30a0;
+}
+.chara-btn:active { transform: scale(0.94); }
+.chara-btn .chara-icon { font-size: 48px; display: block; margin-bottom: 4px; }
+.chara-btn .chara-name { font-size: 15px; }
+.chara-btn .chara-sub  { font-size: 11px; color: #9a7aba; margin-top: 2px; }
 
 /* ─ Confetti ─ */
 #cfCanvas {
@@ -208,7 +234,7 @@ body {
 <div class="header">
   <a href="./index.html" class="back-btn">&#8592; もどる</a>
   <div class="title">🌟 ぼうけん めいろ 🌟</div>
-  <div class="sub">🐶 ワンちゃんを ゴールまで つれていこう！</div>
+  <div class="sub" id="headerSub">ゴールまで つれていこう！</div>
   <div class="friends-bar">
     <div class="fbadge"><span class="femoji" id="f0">🐰</span><span class="flabel" id="fl0">ウサギ</span></div>
     <div class="fbadge"><span class="femoji" id="f1">🐤</span><span class="flabel" id="fl1">ピヨちゃん</span></div>
@@ -232,6 +258,26 @@ body {
   <div class="cbtn empty"></div>
 </div>
 
+<!-- キャラ選択オーバーレイ -->
+<div class="overlay show" id="charaOverlay">
+  <div class="pcard">
+    <div class="ptitle">🎮 キャラを えらんでね！</div>
+    <div class="chara-row">
+      <button class="chara-btn" onclick="selectChara('omochi')">
+        <span class="chara-icon">🐕</span>
+        <span class="chara-name">おもち</span>
+        <span class="chara-sub">しろいイヌ</span>
+      </button>
+      <button class="chara-btn" onclick="selectChara('oto')">
+        <span class="chara-icon">👧</span>
+        <span class="chara-name">おとちゃん</span>
+        <span class="chara-sub">くろかみの おんなのこ</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ポップアップオーバーレイ -->
 <div class="overlay" id="overlay">
   <div class="pcard">
     <span class="pemoji" id="pEmoji"></span>
@@ -247,6 +293,60 @@ body {
 'use strict';
 
 // ══════════════════════════════════════
+//  キャラクター定義
+// ══════════════════════════════════════
+const CHARAS = {
+  omochi: {
+    emoji: '🐕',
+    name: 'おもち',
+    glowColor: 'rgba(255,200,60,0.28)',
+    shadowColor: 'rgba(200,180,255,0.7)',
+    // canvas描画：白い犬らしく白背景+絵文字
+    drawPlayer(gfx, px, py, cs, t0) {
+      const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
+      gfx.fillStyle = `rgba(255,200,60,${0.28*glow})`;
+      gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
+      gfx.fillStyle = '#ffffff';
+      gfx.shadowColor = 'rgba(200,180,255,0.8)';
+      gfx.shadowBlur = cs*0.4;
+      gfx.beginPath(); gfx.arc(px, py, cs*0.42, 0, Math.PI*2); gfx.fill();
+      gfx.shadowBlur = 0;
+      gfx.font = `${cs*0.72}px serif`;
+      gfx.fillText('🐕', px, py);
+    }
+  },
+  oto: {
+    emoji: '👧',
+    name: 'おとちゃん',
+    glowColor: 'rgba(255,160,220,0.28)',
+    shadowColor: 'rgba(255,100,180,0.7)',
+    drawPlayer(gfx, px, py, cs, t0) {
+      const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
+      gfx.fillStyle = `rgba(255,160,220,${0.28*glow})`;
+      gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
+      gfx.fillStyle = '#fff0f8';
+      gfx.shadowColor = 'rgba(255,100,180,0.8)';
+      gfx.shadowBlur = cs*0.4;
+      gfx.beginPath(); gfx.arc(px, py, cs*0.42, 0, Math.PI*2); gfx.fill();
+      gfx.shadowBlur = 0;
+      gfx.font = `${cs*0.72}px serif`;
+      gfx.fillText('👧', px, py);
+    }
+  }
+};
+
+let selectedChara = null;
+
+function selectChara(key) {
+  selectedChara = CHARAS[key];
+  document.getElementById('charaOverlay').classList.remove('show');
+  document.getElementById('headerSub').textContent =
+    `${selectedChara.emoji} ${selectedChara.name}を ゴールまで つれていこう！`;
+  init();
+  startAnim();
+}
+
+// ══════════════════════════════════════
 //  Config
 // ══════════════════════════════════════
 const COLS = 9, ROWS = 10;
@@ -258,35 +358,41 @@ const DIRS = [
   {dx:-1,dy:0,w:W,op:E}
 ];
 
-// 仲間が追従する間隔（ステップ数）
 const FOLLOW_DELAY = 3;
 
-const EVENTS = [
-  {
-    emoji:'🐰', done:false,
-    title:'🐰 ウサギを たすけた！',
-    text:'「クモの巣に ひっかかって\nうごけなかったよ〜！\nありがとう、ワンちゃん！\nいっしょに いくね！」',
-    btn:'すすむ！ ➡️', goal:false
-  },{
-    emoji:'🐤', done:false,
-    title:'🐤 ピヨちゃんを たすけた！',
-    text:'「ママを さがしてたら\nまいごに なっちゃった！\nワンちゃん、よかった〜！\nいっしょに かえろ！」',
-    btn:'すすむ！ ➡️', goal:false
-  },{
-    emoji:'🐻', done:false,
-    title:'🐻 クマくんを たすけた！',
-    text:'「ハナに ハチが とまって\nこわくて うごけなかった！\nたすかったよ〜！\nありがとう！！」',
-    btn:'すすむ！ ➡️', goal:false
-  },{
-    emoji:'🏠', done:false,
-    title:'🎉 ゴール！ やったー！！',
-    text:'みんな たすかった！\nワンちゃん、ほんとうに\nありがとう！\nみんなで パーティーしよう！🎊🎈',
-    btn:null, goal:true
-  }
-];
+// うんちの数
+const POOP_COUNT = 3;
+
+function makeEvents() {
+  return [
+    {
+      emoji:'🐰', done:false,
+      title:'🐰 ウサギを たすけた！',
+      text:'「クモの す に ひっかかって\nうごけなかったよ〜！\nありがとう！\nいっしょに いくね！」',
+      btn:'すすむ！ ➡️', goal:false
+    },{
+      emoji:'🐤', done:false,
+      title:'🐤 ピヨちゃんを たすけた！',
+      text:'「ママを さがしてたら\nまいごに なっちゃった！\nよかった〜！\nいっしょに かえろ！」',
+      btn:'すすむ！ ➡️', goal:false
+    },{
+      emoji:'🐻', done:false,
+      title:'🐻 クマくんを たすけた！',
+      text:'「はなに ハチが とまって\nこわくて うごけなかった！\nたすかったよ〜！\nありがとう！！」',
+      btn:'すすむ！ ➡️', goal:false
+    },{
+      emoji:'🏠', done:false,
+      title:'🎉 ゴール！ やったー！！',
+      text:'みんな たすかった！\nほんとうに ありがとう！\nみんなで パーティーしよう！🎊🎈',
+      btn:null, goal:true
+    }
+  ];
+}
+
+let EVENTS = makeEvents();
 
 // ══════════════════════════════════════
-//  Maze generation (DFS backtracker)
+//  Maze generation
 // ══════════════════════════════════════
 function shuffle(a) {
   for (let i=a.length-1;i>0;i--) {
@@ -334,17 +440,14 @@ function bfsSolve(g, cols, rows, sx, sy, ex, ey) {
 // ══════════════════════════════════════
 //  State
 // ══════════════════════════════════════
-let grid, path, cps, player, cs;
+let grid, path, pathSet, cps, player, cs;
 let pQueue=[], pActive=false;
-// 追従履歴: プレイヤーが踏んだセルの座標リスト（最新が末尾）
 let moveHistory = [];
-// 助けた仲間リスト（順番に追従）
 let rescuedFriends = [];
-// ハンマー
-let hammerPos = null;   // {x,y} or null
+let hammerPos = null;
 let hasHammer = false;
-// ハンマーで壊した壁（再描画用）
-let brokenWalls = [];   // [{x,y,dir}]
+let poops = [];      // [{x,y}]
+let goalDone = false;
 
 const canvas = document.getElementById('mazeCanvas');
 const gfx    = canvas.getContext('2d');
@@ -364,6 +467,7 @@ function init() {
 
   grid = genMaze(COLS, ROWS);
   path = bfsSolve(grid, COLS, ROWS, 0, 0, COLS-1, ROWS-1);
+  pathSet = new Set(path.map(p=>`${p.x},${p.y}`));
 
   const L = path.length;
   cps = [
@@ -372,9 +476,7 @@ function init() {
     {...path[Math.floor(L*0.78)], fi:2},
   ];
 
-  // ── ハンマー＆必須壁の配置 ──
-  // 1. 解答経路の後半に「壊さないと通れない壁」を1か所追加
-  //    経路上の隣接セル間の壁を復活させる（経路の70〜85%付近）
+  // ── ハンマー＆必須壁 ──
   const wallIdx = Math.floor(L * 0.72);
   const wFrom = path[wallIdx];
   const wTo   = path[wallIdx + 1];
@@ -382,24 +484,33 @@ function init() {
   const wOp   = oppDir(wDir);
   grid[wFrom.y][wFrom.x].w[wDir] = 1;
   grid[wTo.y][wTo.x].w[wOp]      = 1;
-  brokenWalls = [];
 
-  // 2. ハンマーは経路の30〜50%付近に配置（必須壁より手前）
   const hammerIdx = Math.floor(L * 0.38);
   hammerPos = { x: path[hammerIdx].x, y: path[hammerIdx].y };
-  // ハンマーがチェックポイントと重ならないよう少しずらす
   for (const cp of cps) {
     if (hammerPos.x === cp.x && hammerPos.y === cp.y) {
       hammerPos = { x: path[hammerIdx + 1].x, y: path[hammerIdx + 1].y };
       break;
     }
   }
+  hasHammer = false;
 
-  EVENTS.forEach(e=>e.done=false);
+  // ── うんち配置（解答経路外のセルからランダムに選ぶ） ──
+  const offPath = [];
+  for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {
+    const k = `${x},${y}`;
+    if (!pathSet.has(k) && !(x===0&&y===0) && !(x===COLS-1&&y===ROWS-1)) {
+      offPath.push({x,y});
+    }
+  }
+  shuffle(offPath);
+  poops = offPath.slice(0, Math.min(POOP_COUNT, offPath.length));
+
+  EVENTS = makeEvents();
   player = {x:0, y:0};
   moveHistory = [{x:0, y:0}];
   rescuedFriends = [];
-  hasHammer = false;
+  goalDone = false;
   pQueue=[]; pActive=false;
 
   [0,1,2].forEach(i=>{
@@ -410,7 +521,6 @@ function init() {
   draw();
 }
 
-// 2セル間の方向を返す
 function dirBetween(from, to) {
   if (to.x === from.x + 1) return E;
   if (to.x === from.x - 1) return W;
@@ -436,7 +546,7 @@ function draw() {
   gfx.fillStyle=bg;
   gfx.fillRect(0,0,W,H);
 
-  // Subtle grid dots
+  // Grid dots
   gfx.fillStyle='rgba(160,140,220,0.12)';
   for (let y=0;y<=ROWS;y++) for (let x=0;x<=COLS;x++) {
     gfx.beginPath();
@@ -495,7 +605,14 @@ function draw() {
   gfx.fillStyle='#92400e';
   gfx.fillText('GOAL', gx, gy-cs*0.56);
 
-  // HAMMER（未取得の場合）
+  // POOPS
+  for (const p of poops) {
+    const ppx=(p.x+0.5)*cs, ppy=(p.y+0.5)*cs;
+    gfx.font=`${cs*0.55}px serif`;
+    gfx.fillText('💩', ppx, ppy+cs*0.04);
+  }
+
+  // HAMMER
   if (hammerPos && !hasHammer) {
     const hx=(hammerPos.x+0.5)*cs, hy=(hammerPos.y+0.5)*cs;
     const hb = 0.88 + 0.12*Math.sin((Date.now()-t0)/400);
@@ -527,15 +644,13 @@ function draw() {
     gfx.fillText(EVENTS[cp.fi].emoji, cx2, cy2+cs*0.04);
   }
 
-  // FOLLOWERS（仲間を後ろから順に描画 - プレイヤーより先に描いてプレイヤーが前面になる）
+  // FOLLOWERS
   for (let i = rescuedFriends.length - 1; i >= 0; i--) {
     const f = rescuedFriends[i];
-    // 履歴インデックス: (i+1) * FOLLOW_DELAY 個前
     const histIdx = Math.max(0, moveHistory.length - 1 - (i + 1) * FOLLOW_DELAY);
     const pos = moveHistory[histIdx];
     const fx = (pos.x + 0.5) * cs;
     const fy = (pos.y + 0.5) * cs;
-    // 小さめに描画（後ろに続いている感）
     const scale = 0.62 - i * 0.04;
     gfx.font = `${cs * scale}px serif`;
     gfx.fillText(f.emoji, fx, fy + cs * 0.04);
@@ -543,28 +658,24 @@ function draw() {
 
   // PLAYER
   const px=(player.x+0.5)*cs, py=(player.y+0.5)*cs;
-  const glow = 0.7 + 0.3*Math.sin((Date.now()-t0)/300);
-  gfx.fillStyle=`rgba(255,200,60,${0.28*glow})`;
-  gfx.beginPath();
-  gfx.arc(px, py, cs*0.52, 0, Math.PI*2);
-  gfx.fill();
-  gfx.fillStyle='white';
-  gfx.shadowColor='rgba(255,160,0,0.7)';
-  gfx.shadowBlur=cs*0.4;
-  gfx.beginPath();
-  gfx.arc(px, py, cs*0.42, 0, Math.PI*2);
-  gfx.fill();
-  gfx.shadowBlur=0;
-  gfx.font=`${cs*0.72}px serif`;
-  gfx.fillText('🐶', px, py);
+  selectedChara.drawPlayer(gfx, px, py, cs, t0);
 
-  // ハンマー所持中アイコン（プレイヤーの右上）
+  // ハンマー所持中アイコン
   if (hasHammer) {
     gfx.font=`${cs*0.32}px serif`;
     gfx.fillText('🔨', px + cs*0.28, py - cs*0.28);
   }
 
-  const anyActive = cps.some(c=>!c.done) || !EVENTS[3].done;
+  // 仲間追従中のゴール到達チェック（プレイヤーがゴール済みで仲間が追いついた瞬間）
+  if (!goalDone && player.x === COLS-1 && player.y === ROWS-1 && rescuedFriends.length > 0) {
+    const histIdx = Math.max(0, moveHistory.length - 1 - rescuedFriends.length * FOLLOW_DELAY);
+    const tailPos = moveHistory[histIdx];
+    if (tailPos.x === COLS-1 && tailPos.y === ROWS-1) {
+      triggerGoal();
+    }
+  }
+
+  const anyActive = cps.some(c=>!c.done) || !goalDone;
   if (anyActive) {
     animId = requestAnimationFrame(draw);
   }
@@ -579,22 +690,17 @@ function startAnim() {
 //  Movement
 // ══════════════════════════════════════
 function move(dx, dy) {
-  if (pActive) return;
+  if (pActive || goalDone) return;
   const {x,y} = player;
   const wi = (dx===0) ? (dy<0?N:S) : (dx>0?E:W);
 
   if (grid[y][x].w[wi]) {
-    // 壁がある → ハンマー所持中なら壁を壊す
-    if (hasHammer) {
-      breakWall(x, y, dx, dy, wi);
-    }
+    if (hasHammer) breakWall(x, y, dx, dy, wi);
     return;
   }
 
   player.x += dx;
   player.y += dy;
-
-  // 履歴に追加
   moveHistory.push({x: player.x, y: player.y});
 
   draw();
@@ -606,10 +712,10 @@ function breakWall(x, y, dx, dy, wi) {
   if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
   grid[y][x].w[wi] = 0;
   grid[ny][nx].w[oppDir(wi)] = 0;
-  hasHammer = false; // ハンマーは1回使ったら消える
-  brokenWalls.push({x, y, dir: wi});
+  hasHammer = false;
   chime('hammer');
   draw();
+  showBreakWallPopup();
 }
 
 function checkTriggers() {
@@ -619,11 +725,20 @@ function checkTriggers() {
     hasHammer = true;
     hammerPos = null;
     chime('item');
-    // 取得ポップアップ（簡易）
     showHammerPopup();
     return;
   }
 
+  // うんち判定
+  const poopIdx = poops.findIndex(p => p.x===player.x && p.y===player.y);
+  if (poopIdx !== -1) {
+    poops.splice(poopIdx, 1);
+    chime('poop');
+    showPoopPopup();
+    return;
+  }
+
+  // チェックポイント
   for (const cp of cps) {
     if (!cp.done && player.x===cp.x && player.y===cp.y) {
       cp.done=true;
@@ -634,12 +749,29 @@ function checkTriggers() {
       chime('rescue');
     }
   }
-  if (player.x===COLS-1 && player.y===ROWS-1 && !EVENTS[3].done) {
-    EVENTS[3].done=true;
-    qPop(3);
-    chime('win');
-    confettiStart();
+
+  // ゴール判定：最後尾の仲間がゴールに到達（仲間がいない場合はプレイヤー本体）
+  checkGoal();
+}
+
+function checkGoal() {
+  if (goalDone) return;
+  if (player.x !== COLS-1 || player.y !== ROWS-1) return;
+  const totalMembers = rescuedFriends.length;
+  if (totalMembers === 0) {
+    // 仲間なし → プレイヤー自身がゴール到達でクリア
+    triggerGoal();
   }
+  // 仲間がいる場合は draw ループ内で最後尾到達を検知してトリガー
+}
+
+function triggerGoal() {
+  if (goalDone) return;
+  goalDone = true;
+  EVENTS[3].done = true;
+  qPop(3);
+  chime('win');
+  confettiStart();
 }
 
 // ══════════════════════════════════════
@@ -658,7 +790,7 @@ function showPop() {
   const btn=document.getElementById('pBtn');
   if (ev.goal) {
     btn.className='pbtn restart';
-    btn.textContent='もう一度 あそぶ！ 🔄';
+    btn.textContent='もう いちど あそぶ！ 🔄';
     btn.onclick=()=>{closePop();init();startAnim();};
   } else {
     btn.className='pbtn';
@@ -679,12 +811,55 @@ function showHammerPopup() {
   document.getElementById('pEmoji').textContent = '🔨';
   document.getElementById('pTitle').textContent = '🔨 ハンマーを ひろった！';
   document.getElementById('pText').textContent =
-    'かべに むかって すすむと\nかべを いっかい だけ\nこわせるよ！';
+    'かべに むかって すすむと\nかべを 1かいだけ こわせるよ！\nうまく つかってね！';
   const btn = document.getElementById('pBtn');
   btn.className = 'pbtn';
   btn.textContent = 'やった！ ➡️';
   btn.onclick = closePop;
   document.getElementById('overlay').classList.add('show');
+}
+
+function showBreakWallPopup() {
+  pActive = true;
+  document.getElementById('pEmoji').textContent = '💥';
+  document.getElementById('pTitle').textContent = '💥 かべを こわした！';
+  document.getElementById('pText').textContent =
+    'ハンマーで かべを ドーン！\nみちが ひらいたよ！\nすすもう！';
+  const btn = document.getElementById('pBtn');
+  btn.className = 'pbtn';
+  btn.textContent = 'すすむ！ ➡️';
+  btn.onclick = closePop;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function showPoopPopup() {
+  pActive = true;
+  document.getElementById('pEmoji').textContent = '💩';
+  document.getElementById('pTitle').textContent = '💩 うんちを ふんだ！';
+  document.getElementById('pText').textContent =
+    'くさ〜い！\nスタートに もどるよ〜！\nきをつけてね！';
+  const btn = document.getElementById('pBtn');
+  btn.className = 'pbtn';
+  btn.textContent = 'もどる…😢';
+  btn.onclick = () => {
+    closePop();
+    returnToStart();
+  };
+  document.getElementById('overlay').classList.add('show');
+}
+
+function returnToStart() {
+  player = {x:0, y:0};
+  moveHistory = [{x:0, y:0}];
+  rescuedFriends = [];
+  // チェックポイントをリセット
+  EVENTS.forEach(e=>e.done=false);
+  cps.forEach(cp=>cp.done=false);
+  [0,1,2].forEach(i=>{
+    document.getElementById(`f${i}`).className='femoji';
+    document.getElementById(`fl${i}`).className='flabel';
+  });
+  draw();
 }
 
 // ══════════════════════════════════════
@@ -700,7 +875,6 @@ document.addEventListener('keydown', e=>{
   if(m[e.key]){e.preventDefault();move(...m[e.key]);}
 });
 
-// Swipe
 let ts=null;
 document.addEventListener('touchstart', e=>{
   ts={x:e.touches[0].clientX, y:e.touches[0].clientY};
@@ -717,7 +891,7 @@ document.addEventListener('touchend', e=>{
 },{passive:true});
 
 // ══════════════════════════════════════
-//  Sound (Web Audio)
+//  Sound
 // ══════════════════════════════════════
 let ac=null;
 function getAC() { return ac||(ac=new(window.AudioContext||window.webkitAudioContext)()); }
@@ -729,7 +903,8 @@ function chime(type) {
       type==='rescue' ? [[523,.0],[659,.13],[784,.26],[1047,.40]] :
       type==='win'    ? [[523,.0],[659,.1],[784,.2],[880,.32],[1047,.46],[880,.58],[1047,.72]] :
       type==='item'   ? [[880,.0],[1047,.14],[1320,.28]] :
-      type==='hammer' ? [[220,.0],[180,.1],[150,.2]] :
+      type==='hammer' ? [[300,.0],[200,.1],[150,.2]] :
+      type==='poop'   ? [[300,.0],[250,.1],[200,.2],[150,.3]] :
       [];
     notes.forEach(([f,dt])=>{
       const o=a.createOscillator(), g=a.createGain();
@@ -756,7 +931,7 @@ function confettiStart() {
     x:Math.random()*cf.width, y:-30,
     vx:(Math.random()-.5)*6, vy:Math.random()*4+1.5,
     col:CCOLS[Math.floor(Math.random()*CCOLS.length)],
-    s:Math.random()*9+5, r:Math.random()*Math.PI*2, vr:(Math.random()-.5)*.18, vy2:0
+    s:Math.random()*9+5, r:Math.random()*Math.PI*2, vr:(Math.random()-.5)*.18
   }));
   if(!cfGoing){cfGoing=true;cfLoop();}
 }
@@ -773,11 +948,6 @@ function cfLoop() {
   else{cfGoing=false;}
 }
 
-// ══════════════════════════════════════
-//  Start!
-// ══════════════════════════════════════
-init();
-startAnim();
 </script>
 </body>
 </html>
