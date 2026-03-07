@@ -12,10 +12,14 @@ Vercel でホスティングし、スマホからいつでも遊べます。
 ```
 child-playground/
 │
-├── index.html          # メニュー画面（こどもランド）
-├── bouken-meiro.html   # ぼうけん迷路
+├── vercel.json             # Vercel設定（outputDirectory: public）
+├── README.md
+├── CLAUDE.md
 │
-└── README.md
+└── public/                 # Vercel公開ディレクトリ
+    ├── index.html          # メニュー画面（こどもランド）
+    ├── bouken-meiro.html   # ぼうけん迷路
+    └── tashite-goal.html   # たしてゴール！
 ```
 
 > 新しいコンテンツは `.html` ファイルを追加し、`index.html` のカードを更新するだけで拡充できます。
@@ -27,11 +31,11 @@ child-playground/
 | ファイル | タイトル | 状態 | 対象年齢 |
 |---|---|---|---|
 | `bouken-meiro.html` | 🐶 ぼうけん めいろ | ✅ 公開中 | 4〜6歳 |
+| `tashite-goal.html` | 🔢 たして ゴール！ | ✅ 公開中 | 5歳〜小1 |
 | *(未作成)* | 🎨 おえかき | 🔜 準備中 | — |
 | *(未作成)* | 🎹 おんがく | 🔜 準備中 | — |
 | *(未作成)* | 🧠 クイズ | 🔜 準備中 | — |
 | *(未作成)* | 📖 おはなし | 🔜 準備中 | — |
-| *(未作成)* | 🧩 パズル | 🔜 準備中 | — |
 
 ---
 
