@@ -339,6 +339,7 @@ let selectedChara = null;
 
 function selectChara(key) {
   selectedChara = CHARAS[key];
+  currentLeader = { emoji: selectedChara.emoji, drawPlayer: selectedChara.drawPlayer };
   document.getElementById('charaOverlay').classList.remove('show');
   document.getElementById('headerSub').textContent =
     `${selectedChara.emoji} ${selectedChara.name}を ゴールまで つれていこう！`;
@@ -446,6 +447,7 @@ let moveHistory = [];
 let rescuedFriends = [];   // ゴール前の仲間（後ろに続く）
 let goaledCount = 0;       // ゴールに入った人数（先頭キャラ含む）
 let totalMembers = 1;      // 先頭 + 助けた仲間の合計
+let currentLeader = null;  // 現在操作中のキャラ描画情報 {emoji, drawFn}
 let hammerPos = null;
 let hasHammer = false;
 let poops = [];
@@ -514,6 +516,7 @@ function init() {
   rescuedFriends = [];
   goaledCount = 0;
   totalMembers = 1;
+  currentLeader = { emoji: selectedChara.emoji, drawPlayer: selectedChara.drawPlayer };
   goalDone = false;
   pQueue=[]; pActive=false;
 
@@ -662,7 +665,7 @@ function draw() {
 
   // PLAYER
   const px=(player.x+0.5)*cs, py=(player.y+0.5)*cs;
-  selectedChara.drawPlayer(gfx, px, py, cs, t0);
+  currentLeader.drawPlayer(gfx, px, py, cs, t0);
 
   // ハンマー所持中アイコン
   if (hasHammer) {
@@ -762,17 +765,32 @@ function checkGoal() {
   }
 
   // まだ仲間が残っている → 先頭の仲間を新しい操作キャラに昇格
-  // 先頭仲間の現在位置を新しいプレイヤー位置として引き継ぐ
-  const nextFriend = rescuedFriends.shift(); // 先頭仲間を取り出す
+  const nextFriend = rescuedFriends.shift();
   const histIdx = Math.max(0, moveHistory.length - 1 - 1 * FOLLOW_DELAY);
   const nextPos = moveHistory[histIdx];
   player = { x: nextPos.x, y: nextPos.y };
-  // 履歴を新しい先頭の位置から始め直す（残り仲間の追従のため）
   moveHistory = moveHistory.slice(0, histIdx + 1);
 
-  // サブタイトルを更新して操作キャラが変わったことを示す
+  // 操作キャラを仲間の絵文字に切り替え
+  const friendEmoji = nextFriend.emoji;
+  currentLeader = {
+    emoji: friendEmoji,
+    drawPlayer(gfx, px, py, cs, t0) {
+      const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
+      gfx.fillStyle = `rgba(255,200,60,${0.28*glow})`;
+      gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
+      gfx.fillStyle = 'white';
+      gfx.shadowColor = 'rgba(255,160,0,0.7)';
+      gfx.shadowBlur = cs*0.4;
+      gfx.beginPath(); gfx.arc(px, py, cs*0.42, 0, Math.PI*2); gfx.fill();
+      gfx.shadowBlur = 0;
+      gfx.font = `${cs*0.72}px serif`;
+      gfx.fillText(friendEmoji, px, py);
+    }
+  };
+
   document.getElementById('headerSub').textContent =
-    `${nextFriend.emoji} つぎは ${nextFriend.emoji} をゴールへ！（${goaledCount}/${totalMembers}）`;
+    `${friendEmoji} つぎは ${friendEmoji} をゴールへ！（${goaledCount}/${totalMembers}）`;
 }
 
 function triggerGoal() {
@@ -870,6 +888,7 @@ function returnToStart() {
     document.getElementById(`f${i}`).className='femoji';
     document.getElementById(`fl${i}`).className='flabel';
   });
+  currentLeader = { emoji: selectedChara.emoji, drawPlayer: selectedChara.drawPlayer };
   document.getElementById('headerSub').textContent =
     `${selectedChara.emoji} ${selectedChara.name}を ゴールまで つれていこう！`;
   draw();
