@@ -258,6 +258,9 @@ const DIRS = [
   {dx:-1,dy:0,w:W,op:E}
 ];
 
+// 仲間が追従する間隔（ステップ数）
+const FOLLOW_DELAY = 3;
+
 const EVENTS = [
   {
     emoji:'🐰', done:false,
@@ -312,12 +315,12 @@ function genMaze(cols, rows) {
   return g;
 }
 
-function bfsSolve(g, cols, rows) {
-  const q=[{x:0,y:0,p:[{x:0,y:0}]}];
-  const seen=new Set(['0,0']);
+function bfsSolve(g, cols, rows, sx, sy, ex, ey) {
+  const q=[{x:sx,y:sy,p:[{x:sx,y:sy}]}];
+  const seen=new Set([`${sx},${sy}`]);
   while (q.length) {
     const {x,y,p}=q.shift();
-    if (x===cols-1&&y===rows-1) return p;
+    if (x===ex&&y===ey) return p;
     for (const {dx,dy,w} of DIRS) {
       const nx=x+dx,ny=y+dy,k=`${nx},${ny}`;
       if (nx>=0&&nx<cols&&ny>=0&&ny<rows&&!g[y][x].w[w]&&!seen.has(k)) {
@@ -333,6 +336,15 @@ function bfsSolve(g, cols, rows) {
 // ══════════════════════════════════════
 let grid, path, cps, player, cs;
 let pQueue=[], pActive=false;
+// 追従履歴: プレイヤーが踏んだセルの座標リスト（最新が末尾）
+let moveHistory = [];
+// 助けた仲間リスト（順番に追従）
+let rescuedFriends = [];
+// ハンマー
+let hammerPos = null;   // {x,y} or null
+let hasHammer = false;
+// ハンマーで壊した壁（再描画用）
+let brokenWalls = [];   // [{x,y,dir}]
 
 const canvas = document.getElementById('mazeCanvas');
 const gfx    = canvas.getContext('2d');
@@ -342,7 +354,7 @@ const gfx    = canvas.getContext('2d');
 // ══════════════════════════════════════
 function init() {
   const maxW = Math.min(window.innerWidth, 430) - 20;
-  const dpadH = 3*44 + 2*3 + 4 + 14; // 3 rows + gaps + padding
+  const dpadH = 3*44 + 2*3 + 4 + 14;
   const headerH = document.querySelector('.header').offsetHeight + 8;
   const maxH = window.innerHeight - dpadH - headerH;
   cs = Math.min(Math.floor(maxW/COLS), Math.floor(maxH/ROWS), 42);
@@ -351,7 +363,7 @@ function init() {
   canvas.height = ROWS*cs;
 
   grid = genMaze(COLS, ROWS);
-  path = bfsSolve(grid, COLS, ROWS);
+  path = bfsSolve(grid, COLS, ROWS, 0, 0, COLS-1, ROWS-1);
 
   const L = path.length;
   cps = [
@@ -360,8 +372,34 @@ function init() {
     {...path[Math.floor(L*0.78)], fi:2},
   ];
 
+  // ── ハンマー＆必須壁の配置 ──
+  // 1. 解答経路の後半に「壊さないと通れない壁」を1か所追加
+  //    経路上の隣接セル間の壁を復活させる（経路の70〜85%付近）
+  const wallIdx = Math.floor(L * 0.72);
+  const wFrom = path[wallIdx];
+  const wTo   = path[wallIdx + 1];
+  const wDir  = dirBetween(wFrom, wTo);
+  const wOp   = oppDir(wDir);
+  grid[wFrom.y][wFrom.x].w[wDir] = 1;
+  grid[wTo.y][wTo.x].w[wOp]      = 1;
+  brokenWalls = [];
+
+  // 2. ハンマーは経路の30〜50%付近に配置（必須壁より手前）
+  const hammerIdx = Math.floor(L * 0.38);
+  hammerPos = { x: path[hammerIdx].x, y: path[hammerIdx].y };
+  // ハンマーがチェックポイントと重ならないよう少しずらす
+  for (const cp of cps) {
+    if (hammerPos.x === cp.x && hammerPos.y === cp.y) {
+      hammerPos = { x: path[hammerIdx + 1].x, y: path[hammerIdx + 1].y };
+      break;
+    }
+  }
+
   EVENTS.forEach(e=>e.done=false);
   player = {x:0, y:0};
+  moveHistory = [{x:0, y:0}];
+  rescuedFriends = [];
+  hasHammer = false;
   pQueue=[]; pActive=false;
 
   [0,1,2].forEach(i=>{
@@ -372,10 +410,18 @@ function init() {
   draw();
 }
 
+// 2セル間の方向を返す
+function dirBetween(from, to) {
+  if (to.x === from.x + 1) return E;
+  if (to.x === from.x - 1) return W;
+  if (to.y === from.y + 1) return S;
+  return N;
+}
+function oppDir(d) { return [S,W,N,E][d]; }
+
 // ══════════════════════════════════════
 //  Drawing
 // ══════════════════════════════════════
-// Animated time for glowing checkpoints
 let t0 = Date.now();
 let animId = null;
 
@@ -449,6 +495,18 @@ function draw() {
   gfx.fillStyle='#92400e';
   gfx.fillText('GOAL', gx, gy-cs*0.56);
 
+  // HAMMER（未取得の場合）
+  if (hammerPos && !hasHammer) {
+    const hx=(hammerPos.x+0.5)*cs, hy=(hammerPos.y+0.5)*cs;
+    const hb = 0.88 + 0.12*Math.sin((Date.now()-t0)/400);
+    gfx.fillStyle=`rgba(255,160,0,${0.3*hb})`;
+    gfx.beginPath();
+    gfx.arc(hx, hy, cs*0.45*hb, 0, Math.PI*2);
+    gfx.fill();
+    gfx.font=`${cs*0.58}px serif`;
+    gfx.fillText('🔨', hx, hy+cs*0.04);
+  }
+
   // CHECKPOINTS
   const cpColors=['rgba(255,160,190,','rgba(255,240,120,','rgba(255,190,120,'];
   for (const cp of cps) {
@@ -459,7 +517,6 @@ function draw() {
     gfx.beginPath();
     gfx.arc(cx2, cy2, cs*0.5*p2, 0, Math.PI*2);
     gfx.fill();
-    // Exclamation "!" above
     gfx.fillStyle='#ff4466';
     gfx.font=`bold ${cs*0.22}px sans-serif`;
     gfx.fillText('！', cx2, cy2-cs*0.4);
@@ -467,15 +524,27 @@ function draw() {
     gfx.fillText(EVENTS[cp.fi].emoji, cx2, cy2+cs*0.04);
   }
 
+  // FOLLOWERS（仲間を後ろから順に描画 - プレイヤーより先に描いてプレイヤーが前面になる）
+  for (let i = rescuedFriends.length - 1; i >= 0; i--) {
+    const f = rescuedFriends[i];
+    // 履歴インデックス: (i+1) * FOLLOW_DELAY 個前
+    const histIdx = Math.max(0, moveHistory.length - 1 - (i + 1) * FOLLOW_DELAY);
+    const pos = moveHistory[histIdx];
+    const fx = (pos.x + 0.5) * cs;
+    const fy = (pos.y + 0.5) * cs;
+    // 小さめに描画（後ろに続いている感）
+    const scale = 0.62 - i * 0.04;
+    gfx.font = `${cs * scale}px serif`;
+    gfx.fillText(f.emoji, fx, fy + cs * 0.04);
+  }
+
   // PLAYER
   const px=(player.x+0.5)*cs, py=(player.y+0.5)*cs;
-  // Glow ring
   const glow = 0.7 + 0.3*Math.sin((Date.now()-t0)/300);
   gfx.fillStyle=`rgba(255,200,60,${0.28*glow})`;
   gfx.beginPath();
   gfx.arc(px, py, cs*0.52, 0, Math.PI*2);
   gfx.fill();
-  // White circle background
   gfx.fillStyle='white';
   gfx.shadowColor='rgba(255,160,0,0.7)';
   gfx.shadowBlur=cs*0.4;
@@ -483,11 +552,15 @@ function draw() {
   gfx.arc(px, py, cs*0.42, 0, Math.PI*2);
   gfx.fill();
   gfx.shadowBlur=0;
-  // Dog emoji
   gfx.font=`${cs*0.72}px serif`;
   gfx.fillText('🐶', px, py);
 
-  // Continue animation loop only if checkpoints/goal remain
+  // ハンマー所持中アイコン（プレイヤーの右上）
+  if (hasHammer) {
+    gfx.font=`${cs*0.32}px serif`;
+    gfx.fillText('🔨', px + cs*0.28, py - cs*0.28);
+  }
+
   const anyActive = cps.some(c=>!c.done) || !EVENTS[3].done;
   if (anyActive) {
     animId = requestAnimationFrame(draw);
@@ -504,20 +577,56 @@ function startAnim() {
 // ══════════════════════════════════════
 function move(dx, dy) {
   if (pActive) return;
-  const {x,y}=player;
-  const wi=(dx===0)?(dy<0?N:S):(dx>0?E:W);
-  if (grid[y][x].w[wi]) return;
-  player.x+=dx; player.y+=dy;
+  const {x,y} = player;
+  const wi = (dx===0) ? (dy<0?N:S) : (dx>0?E:W);
+
+  if (grid[y][x].w[wi]) {
+    // 壁がある → ハンマー所持中なら壁を壊す
+    if (hasHammer) {
+      breakWall(x, y, dx, dy, wi);
+    }
+    return;
+  }
+
+  player.x += dx;
+  player.y += dy;
+
+  // 履歴に追加
+  moveHistory.push({x: player.x, y: player.y});
+
   draw();
   checkTriggers();
 }
 
+function breakWall(x, y, dx, dy, wi) {
+  const nx = x + dx, ny = y + dy;
+  if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
+  grid[y][x].w[wi] = 0;
+  grid[ny][nx].w[oppDir(wi)] = 0;
+  hasHammer = false; // ハンマーは1回使ったら消える
+  brokenWalls.push({x, y, dir: wi});
+  chime('hammer');
+  draw();
+}
+
 function checkTriggers() {
+  // ハンマー取得
+  if (hammerPos && !hasHammer &&
+      player.x === hammerPos.x && player.y === hammerPos.y) {
+    hasHammer = true;
+    hammerPos = null;
+    chime('item');
+    // 取得ポップアップ（簡易）
+    showHammerPopup();
+    return;
+  }
+
   for (const cp of cps) {
     if (!cp.done && player.x===cp.x && player.y===cp.y) {
       cp.done=true;
       document.getElementById(`f${cp.fi}`).className='femoji rescued';
       document.getElementById(`fl${cp.fi}`).className='flabel rescued';
+      rescuedFriends.push({ emoji: EVENTS[cp.fi].emoji, fi: cp.fi });
       qPop(cp.fi);
       chime('rescue');
     }
@@ -562,6 +671,19 @@ function closePop() {
   if(pQueue.length) setTimeout(showPop, 380);
 }
 
+function showHammerPopup() {
+  pActive = true;
+  document.getElementById('pEmoji').textContent = '🔨';
+  document.getElementById('pTitle').textContent = '🔨 ハンマーを ひろった！';
+  document.getElementById('pText').textContent =
+    'かべに むかって すすむと\nかべを いっかい だけ\nこわせるよ！';
+  const btn = document.getElementById('pBtn');
+  btn.className = 'pbtn';
+  btn.textContent = 'やった！ ➡️';
+  btn.onclick = closePop;
+  document.getElementById('overlay').classList.add('show');
+}
+
 // ══════════════════════════════════════
 //  Controls
 // ══════════════════════════════════════
@@ -600,9 +722,12 @@ function getAC() { return ac||(ac=new(window.AudioContext||window.webkitAudioCon
 function chime(type) {
   try {
     const a=getAC(), t=a.currentTime;
-    const notes = type==='rescue'
-      ? [[523,.0],[659,.13],[784,.26],[1047,.40]]
-      : [[523,.0],[659,.1],[784,.2],[880,.32],[1047,.46],[880,.58],[1047,.72]];
+    const notes =
+      type==='rescue' ? [[523,.0],[659,.13],[784,.26],[1047,.40]] :
+      type==='win'    ? [[523,.0],[659,.1],[784,.2],[880,.32],[1047,.46],[880,.58],[1047,.72]] :
+      type==='item'   ? [[880,.0],[1047,.14],[1320,.28]] :
+      type==='hammer' ? [[220,.0],[180,.1],[150,.2]] :
+      [];
     notes.forEach(([f,dt])=>{
       const o=a.createOscillator(), g=a.createGain();
       o.connect(g); g.connect(a.destination);
