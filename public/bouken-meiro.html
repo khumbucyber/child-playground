@@ -499,11 +499,14 @@ function draw() {
   if (hammerPos && !hasHammer) {
     const hx=(hammerPos.x+0.5)*cs, hy=(hammerPos.y+0.5)*cs;
     const hb = 0.88 + 0.12*Math.sin((Date.now()-t0)/400);
-    gfx.fillStyle=`rgba(255,160,0,${0.3*hb})`;
+    gfx.fillStyle='white';
+    gfx.shadowColor='rgba(255,140,0,0.9)';
+    gfx.shadowBlur=cs*0.5;
     gfx.beginPath();
     gfx.arc(hx, hy, cs*0.45*hb, 0, Math.PI*2);
     gfx.fill();
-    gfx.font=`${cs*0.58}px serif`;
+    gfx.shadowBlur=0;
+    gfx.font=`${cs*0.72}px serif`;
     gfx.fillText('🔨', hx, hy+cs*0.04);
   }
 
