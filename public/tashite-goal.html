@@ -237,8 +237,8 @@ body {
 }
 
 .num-btn .btn-animals {
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 14px;
+  line-height: 1.3;
   text-align: center;
   word-break: break-all;
   max-width: 100%;
@@ -415,7 +415,6 @@ let currentAnimal = '🐶';
 
 // 問題ごとにランダムに動物を選ぶ（Lv1/2のみ使用）
 const ANIMALS = ['🐶','🐱','🐰','🐻','🐼','🐨','🐸','🐧','🐤','🦊','🐮','🐷'];
-const ANIMAL_SHOW_MAX = 5; // これ以下の数字のみ絵文字を表示
 
 // ── Level config ───────────────────────────────────────────
 const LEVEL = {
@@ -572,7 +571,7 @@ function renderGrid() {
     numSpan.textContent = n;
     btn.appendChild(numSpan);
 
-    if (showAnimals && n <= ANIMAL_SHOW_MAX) {
+    if (showAnimals) {
       const animalSpan = document.createElement('span');
       animalSpan.className = 'btn-animals';
       animalSpan.textContent = currentAnimal.repeat(n);
@@ -597,14 +596,27 @@ function renderSum() {
   }
   const vals = selected.map(i => numbers[i]);
   const q = currentQ;
+  const op = q.isSubtract ? '−' : q.isMultiply ? '×' : '+';
+  const remaining = q.needCount - selected.length;
+
+  // まだ全部選んでいない場合：入力済み + 残り?スロット + = goal
+  if (remaining > 0) {
+    const parts = [...vals.map(String), ...Array(remaining).fill('?')];
+    el.textContent = parts.join(` ${op} `) + ` = ${goal}`;
+    el.style.color = '#9a7aba';
+    el.style.background = 'rgba(255,255,255,0.8)';
+    return;
+  }
+
+  // 全部選んだ場合：計算結果を表示
   let expr = '';
   let result = 0;
 
-  if (q.isSubtract && selected.length === 2) {
+  if (q.isSubtract) {
     const sorted = [...vals].sort((a, b) => b - a);
     result = sorted[0] - sorted[1];
     expr = `${sorted[0]} − ${sorted[1]} = ${result}`;
-  } else if (q.isMultiply && selected.length === 2) {
+  } else if (q.isMultiply) {
     result = vals[0] * vals[1];
     expr = `${vals[0]} × ${vals[1]} = ${result}`;
   } else {
