@@ -443,10 +443,12 @@ function bfsSolve(g, cols, rows, sx, sy, ex, ey) {
 let grid, path, pathSet, cps, player, cs;
 let pQueue=[], pActive=false;
 let moveHistory = [];
-let rescuedFriends = [];
+let rescuedFriends = [];   // ゴール前の仲間（後ろに続く）
+let goaledCount = 0;       // ゴールに入った人数（先頭キャラ含む）
+let totalMembers = 1;      // 先頭 + 助けた仲間の合計
 let hammerPos = null;
 let hasHammer = false;
-let poops = [];      // [{x,y}]
+let poops = [];
 let goalDone = false;
 
 const canvas = document.getElementById('mazeCanvas');
@@ -510,6 +512,8 @@ function init() {
   player = {x:0, y:0};
   moveHistory = [{x:0, y:0}];
   rescuedFriends = [];
+  goaledCount = 0;
+  totalMembers = 1;
   goalDone = false;
   pQueue=[]; pActive=false;
 
@@ -666,15 +670,6 @@ function draw() {
     gfx.fillText('🔨', px + cs*0.28, py - cs*0.28);
   }
 
-  // 仲間追従中のゴール到達チェック（プレイヤーがゴール済みで仲間が追いついた瞬間）
-  if (!goalDone && player.x === COLS-1 && player.y === ROWS-1 && rescuedFriends.length > 0) {
-    const histIdx = Math.max(0, moveHistory.length - 1 - rescuedFriends.length * FOLLOW_DELAY);
-    const tailPos = moveHistory[histIdx];
-    if (tailPos.x === COLS-1 && tailPos.y === ROWS-1) {
-      triggerGoal();
-    }
-  }
-
   const anyActive = cps.some(c=>!c.done) || !goalDone;
   if (anyActive) {
     animId = requestAnimationFrame(draw);
@@ -703,8 +698,9 @@ function move(dx, dy) {
   player.y += dy;
   moveHistory.push({x: player.x, y: player.y});
 
+  checkGoal();   // ゴール到達チェック（操作キャラ交代含む）を先に
   draw();
-  checkTriggers();
+  if (!goalDone) checkTriggers();
 }
 
 function breakWall(x, y, dx, dy, wi) {
@@ -745,24 +741,38 @@ function checkTriggers() {
       document.getElementById(`f${cp.fi}`).className='femoji rescued';
       document.getElementById(`fl${cp.fi}`).className='flabel rescued';
       rescuedFriends.push({ emoji: EVENTS[cp.fi].emoji, fi: cp.fi });
+      totalMembers++;
       qPop(cp.fi);
       chime('rescue');
     }
   }
-
-  // ゴール判定：最後尾の仲間がゴールに到達（仲間がいない場合はプレイヤー本体）
-  checkGoal();
 }
 
 function checkGoal() {
   if (goalDone) return;
   if (player.x !== COLS-1 || player.y !== ROWS-1) return;
-  const totalMembers = rescuedFriends.length;
-  if (totalMembers === 0) {
-    // 仲間なし → プレイヤー自身がゴール到達でクリア
+
+  // 先頭キャラがゴールに到達
+  goaledCount++;
+
+  if (goaledCount >= totalMembers) {
+    // 全員ゴール
     triggerGoal();
+    return;
   }
-  // 仲間がいる場合は draw ループ内で最後尾到達を検知してトリガー
+
+  // まだ仲間が残っている → 先頭の仲間を新しい操作キャラに昇格
+  // 先頭仲間の現在位置を新しいプレイヤー位置として引き継ぐ
+  const nextFriend = rescuedFriends.shift(); // 先頭仲間を取り出す
+  const histIdx = Math.max(0, moveHistory.length - 1 - 1 * FOLLOW_DELAY);
+  const nextPos = moveHistory[histIdx];
+  player = { x: nextPos.x, y: nextPos.y };
+  // 履歴を新しい先頭の位置から始め直す（残り仲間の追従のため）
+  moveHistory = moveHistory.slice(0, histIdx + 1);
+
+  // サブタイトルを更新して操作キャラが変わったことを示す
+  document.getElementById('headerSub').textContent =
+    `${nextFriend.emoji} つぎは ${nextFriend.emoji} をゴールへ！（${goaledCount}/${totalMembers}）`;
 }
 
 function triggerGoal() {
@@ -852,13 +862,16 @@ function returnToStart() {
   player = {x:0, y:0};
   moveHistory = [{x:0, y:0}];
   rescuedFriends = [];
-  // チェックポイントをリセット
+  goaledCount = 0;
+  totalMembers = 1;
   EVENTS.forEach(e=>e.done=false);
   cps.forEach(cp=>cp.done=false);
   [0,1,2].forEach(i=>{
     document.getElementById(`f${i}`).className='femoji';
     document.getElementById(`fl${i}`).className='flabel';
   });
+  document.getElementById('headerSub').textContent =
+    `${selectedChara.emoji} ${selectedChara.name}を ゴールまで つれていこう！`;
   draw();
 }
 
