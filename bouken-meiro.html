@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ぼうけん めいろ！</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: linear-gradient(150deg, #c8f0b8 0%, #c0dcff 45%, #ffd4ec 100%);
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ─ Header ─ */
+.header {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 6px 12px 2px;
+  text-align: center;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: white;
+  text-shadow: 0 2px 0 #c060a0, 0 4px 10px rgba(192,96,160,0.4);
+}
+
+.sub {
+  font-size: 10px;
+  color: #5a3a7a;
+  margin-top: 1px;
+  font-weight: bold;
+}
+
+.friends-bar {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 4px;
+}
+
+.fbadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.femoji {
+  font-size: 24px;
+  display: inline-block;
+  filter: grayscale(0.5) opacity(0.75);
+  transition: filter 0.5s cubic-bezier(.34,1.56,.64,1), transform 0.5s cubic-bezier(.34,1.56,.64,1);
+}
+.femoji.rescued {
+  filter: none;
+  animation: popIn 0.55s cubic-bezier(.34,1.56,.64,1);
+}
+
+.flabel {
+  font-size: 10px;
+  color: #7a5a9a;
+  font-weight: bold;
+}
+.flabel.rescued { color: #e060b0; }
+
+@keyframes popIn {
+  0%   { transform: scale(0) rotate(-25deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* ─ Maze ─ */
+.maze-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 4px 8px;
+}
+
+#mazeCanvas {
+  display: block;
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(80,40,140,0.22), 0 0 0 3px rgba(255,255,255,0.7);
+}
+
+/* ─ D-Pad ─ */
+.dpad {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(3, 44px);
+  gap: 3px;
+  padding-bottom: 0;
+  padding-top: 4px;
+}
+
+.cbtn {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  border: none;
+  font-size: 22px;
+  background: white;
+  box-shadow: 0 4px 0 rgba(80,50,140,0.22);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s, box-shadow 0.1s;
+  touch-action: manipulation;
+  color: #5a3a9a;
+  font-weight: 900;
+}
+.cbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(80,50,140,0.2); }
+.cbtn.empty { background: transparent; box-shadow: none; pointer-events: none; }
+
+/* ─ Popup ─ */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(60,30,100,0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
+}
+.overlay.show { opacity:1; pointer-events:all; }
+
+.pcard {
+  background: white;
+  border-radius: 28px;
+  padding: 28px 28px 22px;
+  text-align: center;
+  max-width: 300px;
+  width: 86vw;
+  box-shadow: 0 24px 60px rgba(80,40,140,0.4);
+  transform: scale(0.7) translateY(40px);
+  transition: transform 0.45s cubic-bezier(.34,1.56,.64,1);
+}
+.overlay.show .pcard { transform: scale(1) translateY(0); }
+
+.pemoji { font-size: 68px; display: block; margin-bottom: 8px; line-height: 1; }
+.ptitle { font-size: 20px; font-weight: 900; color: #5a30a0; margin-bottom: 10px; }
+.ptext  { font-size: 14px; color: #666; line-height: 1.8; margin-bottom: 20px; white-space: pre-line; }
+
+.pbtn {
+  background: linear-gradient(135deg, #f06090, #ff9f43);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 28px;
+  font-size: 17px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(240,96,144,0.5);
+  width: 100%;
+  letter-spacing: 1px;
+}
+.pbtn.restart {
+  background: linear-gradient(135deg, #43c664, #4d96ff);
+  box-shadow: 0 6px 18px rgba(67,198,100,0.45);
+  margin-top: 10px;
+}
+
+/* ─ Confetti ─ */
+#cfCanvas {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  width: 100%; height: 100%;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">🌟 ぼうけん めいろ 🌟</div>
+  <div class="sub">🐶 ワンちゃんを ゴールまで つれていこう！</div>
+  <div class="friends-bar">
+    <div class="fbadge"><span class="femoji" id="f0">🐰</span><span class="flabel" id="fl0">ウサギ</span></div>
+    <div class="fbadge"><span class="femoji" id="f1">🐤</span><span class="flabel" id="fl1">ピヨちゃん</span></div>
+    <div class="fbadge"><span class="femoji" id="f2">🐻</span><span class="flabel" id="fl2">クマくん</span></div>
+  </div>
+</div>
+
+<div class="maze-wrap">
+  <canvas id="mazeCanvas"></canvas>
+</div>
+
+<div class="dpad">
+  <div class="cbtn empty"></div>
+  <button class="cbtn" id="bU">▲</button>
+  <div class="cbtn empty"></div>
+  <button class="cbtn" id="bL">◀</button>
+  <div class="cbtn empty"></div>
+  <button class="cbtn" id="bR">▶</button>
+  <div class="cbtn empty"></div>
+  <button class="cbtn" id="bD">▼</button>
+  <div class="cbtn empty"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="pcard">
+    <span class="pemoji" id="pEmoji"></span>
+    <div class="ptitle" id="pTitle"></div>
+    <div class="ptext"  id="pText"></div>
+    <button class="pbtn" id="pBtn"></button>
+  </div>
+</div>
+
+<canvas id="cfCanvas"></canvas>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════
+//  Config
+// ══════════════════════════════════════
+const COLS = 9, ROWS = 10;
+const N=0, E=1, S=2, W=3;
+const DIRS = [
+  {dx:0,dy:-1,w:N,op:S},
+  {dx:1,dy:0, w:E,op:W},
+  {dx:0,dy:1, w:S,op:N},
+  {dx:-1,dy:0,w:W,op:E}
+];
+
+const EVENTS = [
+  {
+    emoji:'🐰', done:false,
+    title:'🐰 ウサギを たすけた！',
+    text:'「クモの巣に ひっかかって\nうごけなかったよ〜！\nありがとう、ワンちゃん！\nいっしょに いくね！」',
+    btn:'すすむ！ ➡️', goal:false
+  },{
+    emoji:'🐤', done:false,
+    title:'🐤 ピヨちゃんを たすけた！',
+    text:'「ママを さがしてたら\nまいごに なっちゃった！\nワンちゃん、よかった〜！\nいっしょに かえろ！」',
+    btn:'すすむ！ ➡️', goal:false
+  },{
+    emoji:'🐻', done:false,
+    title:'🐻 クマくんを たすけた！',
+    text:'「ハナに ハチが とまって\nこわくて うごけなかった！\nたすかったよ〜！\nありがとう！！」',
+    btn:'すすむ！ ➡️', goal:false
+  },{
+    emoji:'🏠', done:false,
+    title:'🎉 ゴール！ やったー！！',
+    text:'みんな たすかった！\nワンちゃん、ほんとうに\nありがとう！\nみんなで パーティーしよう！🎊🎈',
+    btn:null, goal:true
+  }
+];
+
+// ══════════════════════════════════════
+//  Maze generation (DFS backtracker)
+// ══════════════════════════════════════
+function shuffle(a) {
+  for (let i=a.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function genMaze(cols, rows) {
+  const g = Array.from({length:rows}, ()=>
+    Array.from({length:cols}, ()=>({w:[1,1,1,1], v:0}))
+  );
+  function dfs(x,y) {
+    g[y][x].v=1;
+    for (const {dx,dy,w,op} of shuffle([...DIRS])) {
+      const nx=x+dx, ny=y+dy;
+      if (nx>=0&&nx<cols&&ny>=0&&ny<rows&&!g[ny][nx].v) {
+        g[y][x].w[w]=0;
+        g[ny][nx].w[op]=0;
+        dfs(nx,ny);
+      }
+    }
+  }
+  dfs(0,0);
+  return g;
+}
+
+function bfsSolve(g, cols, rows) {
+  const q=[{x:0,y:0,p:[{x:0,y:0}]}];
+  const seen=new Set(['0,0']);
+  while (q.length) {
+    const {x,y,p}=q.shift();
+    if (x===cols-1&&y===rows-1) return p;
+    for (const {dx,dy,w} of DIRS) {
+      const nx=x+dx,ny=y+dy,k=`${nx},${ny}`;
+      if (nx>=0&&nx<cols&&ny>=0&&ny<rows&&!g[y][x].w[w]&&!seen.has(k)) {
+        seen.add(k); q.push({x:nx,y:ny,p:[...p,{x:nx,y:ny}]});
+      }
+    }
+  }
+  return [];
+}
+
+// ══════════════════════════════════════
+//  State
+// ══════════════════════════════════════
+let grid, path, cps, player, cs;
+let pQueue=[], pActive=false;
+
+const canvas = document.getElementById('mazeCanvas');
+const gfx    = canvas.getContext('2d');
+
+// ══════════════════════════════════════
+//  Init
+// ══════════════════════════════════════
+function init() {
+  const maxW = Math.min(window.innerWidth, 430) - 20;
+  const dpadH = 3*44 + 2*3 + 4 + 14; // 3 rows + gaps + padding
+  const headerH = document.querySelector('.header').offsetHeight + 8;
+  const maxH = window.innerHeight - dpadH - headerH;
+  cs = Math.min(Math.floor(maxW/COLS), Math.floor(maxH/ROWS), 42);
+
+  canvas.width  = COLS*cs;
+  canvas.height = ROWS*cs;
+
+  grid = genMaze(COLS, ROWS);
+  path = bfsSolve(grid, COLS, ROWS);
+
+  const L = path.length;
+  cps = [
+    {...path[Math.floor(L*0.28)], fi:0},
+    {...path[Math.floor(L*0.55)], fi:1},
+    {...path[Math.floor(L*0.78)], fi:2},
+  ];
+
+  EVENTS.forEach(e=>e.done=false);
+  player = {x:0, y:0};
+  pQueue=[]; pActive=false;
+
+  [0,1,2].forEach(i=>{
+    document.getElementById(`f${i}`).className='femoji';
+    document.getElementById(`fl${i}`).className='flabel';
+  });
+
+  draw();
+}
+
+// ══════════════════════════════════════
+//  Drawing
+// ══════════════════════════════════════
+// Animated time for glowing checkpoints
+let t0 = Date.now();
+let animId = null;
+
+function draw() {
+  const W=canvas.width, H=canvas.height;
+  gfx.clearRect(0,0,W,H);
+
+  // Floor
+  const bg=gfx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#eaf8ea');
+  bg.addColorStop(1,'#eaeeff');
+  gfx.fillStyle=bg;
+  gfx.fillRect(0,0,W,H);
+
+  // Subtle grid dots
+  gfx.fillStyle='rgba(160,140,220,0.12)';
+  for (let y=0;y<=ROWS;y++) for (let x=0;x<=COLS;x++) {
+    gfx.beginPath();
+    gfx.arc(x*cs, y*cs, 1.5, 0, Math.PI*2);
+    gfx.fill();
+  }
+
+  // Walls
+  gfx.strokeStyle='#4430a0';
+  gfx.lineWidth=Math.max(2.5, cs*0.075);
+  gfx.lineCap='round';
+  for (let y=0;y<ROWS;y++) {
+    for (let x=0;x<COLS;x++) {
+      const wl=grid[y][x].w, px=x*cs, py=y*cs;
+      if(wl[N]){gfx.beginPath();gfx.moveTo(px,py);gfx.lineTo(px+cs,py);gfx.stroke();}
+      if(wl[E]){gfx.beginPath();gfx.moveTo(px+cs,py);gfx.lineTo(px+cs,py+cs);gfx.stroke();}
+      if(wl[S]){gfx.beginPath();gfx.moveTo(px,py+cs);gfx.lineTo(px+cs,py+cs);gfx.stroke();}
+      if(wl[W]){gfx.beginPath();gfx.moveTo(px,py);gfx.lineTo(px,py+cs);gfx.stroke();}
+    }
+  }
+
+  gfx.textAlign='center';
+  gfx.textBaseline='middle';
+
+  // START
+  gfx.fillStyle='#4ade80';
+  gfx.shadowColor='rgba(30,180,80,0.6)';
+  gfx.shadowBlur=cs*0.4;
+  gfx.beginPath();
+  gfx.arc(cs*0.5, cs*0.5, cs*0.46, 0, Math.PI*2);
+  gfx.fill();
+  gfx.shadowBlur=0;
+  gfx.font=`${cs*0.52}px serif`;
+  gfx.fillText('🌟', cs*0.5, cs*0.44);
+  gfx.font=`bold ${cs*0.2}px sans-serif`;
+  gfx.fillStyle='white';
+  gfx.fillText('START', cs*0.5, cs*0.84);
+
+  // GOAL
+  const pulse = 0.93 + 0.07*Math.sin((Date.now()-t0)/350);
+  const gx=(COLS-0.5)*cs, gy=(ROWS-0.5)*cs;
+  gfx.fillStyle=`rgba(255,200,30,${0.25*pulse})`;
+  gfx.beginPath();
+  gfx.arc(gx, gy, cs*0.56*pulse, 0, Math.PI*2);
+  gfx.fill();
+  gfx.fillStyle='#facc15';
+  gfx.shadowColor='rgba(250,180,0,0.8)';
+  gfx.shadowBlur=cs*0.5;
+  gfx.beginPath();
+  gfx.arc(gx, gy, cs*0.46, 0, Math.PI*2);
+  gfx.fill();
+  gfx.shadowBlur=0;
+  gfx.font=`${cs*0.62}px serif`;
+  gfx.fillText('🏠', gx, gy+cs*0.04);
+  gfx.font=`bold ${cs*0.2}px sans-serif`;
+  gfx.fillStyle='#92400e';
+  gfx.fillText('GOAL', gx, gy-cs*0.56);
+
+  // CHECKPOINTS
+  const cpColors=['rgba(255,160,190,','rgba(255,240,120,','rgba(255,190,120,'];
+  for (const cp of cps) {
+    if (cp.done) continue;
+    const cx2=(cp.x+0.5)*cs, cy2=(cp.y+0.5)*cs;
+    const p2 = 0.85 + 0.15*Math.sin((Date.now()-t0)/500 + cp.fi*2);
+    gfx.fillStyle=cpColors[cp.fi]+'0.38)';
+    gfx.beginPath();
+    gfx.arc(cx2, cy2, cs*0.5*p2, 0, Math.PI*2);
+    gfx.fill();
+    // Exclamation "!" above
+    gfx.fillStyle='#ff4466';
+    gfx.font=`bold ${cs*0.22}px sans-serif`;
+    gfx.fillText('！', cx2, cy2-cs*0.4);
+    gfx.font=`${cs*0.58}px serif`;
+    gfx.fillText(EVENTS[cp.fi].emoji, cx2, cy2+cs*0.04);
+  }
+
+  // PLAYER
+  const px=(player.x+0.5)*cs, py=(player.y+0.5)*cs;
+  // Glow ring
+  const glow = 0.7 + 0.3*Math.sin((Date.now()-t0)/300);
+  gfx.fillStyle=`rgba(255,200,60,${0.28*glow})`;
+  gfx.beginPath();
+  gfx.arc(px, py, cs*0.52, 0, Math.PI*2);
+  gfx.fill();
+  // White circle background
+  gfx.fillStyle='white';
+  gfx.shadowColor='rgba(255,160,0,0.7)';
+  gfx.shadowBlur=cs*0.4;
+  gfx.beginPath();
+  gfx.arc(px, py, cs*0.42, 0, Math.PI*2);
+  gfx.fill();
+  gfx.shadowBlur=0;
+  // Dog emoji
+  gfx.font=`${cs*0.72}px serif`;
+  gfx.fillText('🐶', px, py);
+
+  // Continue animation loop only if checkpoints/goal remain
+  const anyActive = cps.some(c=>!c.done) || !EVENTS[3].done;
+  if (anyActive) {
+    animId = requestAnimationFrame(draw);
+  }
+}
+
+function startAnim() {
+  if (animId) cancelAnimationFrame(animId);
+  animId = requestAnimationFrame(draw);
+}
+
+// ══════════════════════════════════════
+//  Movement
+// ══════════════════════════════════════
+function move(dx, dy) {
+  if (pActive) return;
+  const {x,y}=player;
+  const wi=(dx===0)?(dy<0?N:S):(dx>0?E:W);
+  if (grid[y][x].w[wi]) return;
+  player.x+=dx; player.y+=dy;
+  draw();
+  checkTriggers();
+}
+
+function checkTriggers() {
+  for (const cp of cps) {
+    if (!cp.done && player.x===cp.x && player.y===cp.y) {
+      cp.done=true;
+      document.getElementById(`f${cp.fi}`).className='femoji rescued';
+      document.getElementById(`fl${cp.fi}`).className='flabel rescued';
+      qPop(cp.fi);
+      chime('rescue');
+    }
+  }
+  if (player.x===COLS-1 && player.y===ROWS-1 && !EVENTS[3].done) {
+    EVENTS[3].done=true;
+    qPop(3);
+    chime('win');
+    confettiStart();
+  }
+}
+
+// ══════════════════════════════════════
+//  Popup
+// ══════════════════════════════════════
+function qPop(i) { pQueue.push(i); if(!pActive) showPop(); }
+
+function showPop() {
+  if(!pQueue.length){pActive=false;return;}
+  pActive=true;
+  const idx=pQueue.shift();
+  const ev=EVENTS[idx];
+  document.getElementById('pEmoji').textContent=ev.emoji;
+  document.getElementById('pTitle').textContent=ev.title;
+  document.getElementById('pText').textContent=ev.text;
+  const btn=document.getElementById('pBtn');
+  if (ev.goal) {
+    btn.className='pbtn restart';
+    btn.textContent='もう一度 あそぶ！ 🔄';
+    btn.onclick=()=>{closePop();init();startAnim();};
+  } else {
+    btn.className='pbtn';
+    btn.textContent=ev.btn;
+    btn.onclick=closePop;
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closePop() {
+  document.getElementById('overlay').classList.remove('show');
+  pActive=false;
+  if(pQueue.length) setTimeout(showPop, 380);
+}
+
+// ══════════════════════════════════════
+//  Controls
+// ══════════════════════════════════════
+document.getElementById('bU').addEventListener('pointerdown', e=>{e.preventDefault();move(0,-1);});
+document.getElementById('bD').addEventListener('pointerdown', e=>{e.preventDefault();move(0,1);});
+document.getElementById('bL').addEventListener('pointerdown', e=>{e.preventDefault();move(-1,0);});
+document.getElementById('bR').addEventListener('pointerdown', e=>{e.preventDefault();move(1,0);});
+
+document.addEventListener('keydown', e=>{
+  const m={'ArrowUp':[0,-1],'ArrowDown':[0,1],'ArrowLeft':[-1,0],'ArrowRight':[1,0]};
+  if(m[e.key]){e.preventDefault();move(...m[e.key]);}
+});
+
+// Swipe
+let ts=null;
+document.addEventListener('touchstart', e=>{
+  ts={x:e.touches[0].clientX, y:e.touches[0].clientY};
+},{passive:true});
+document.addEventListener('touchmove', e=>{ if(ts) e.preventDefault(); },{passive:false});
+document.addEventListener('touchend', e=>{
+  if(!ts) return;
+  const dx=e.changedTouches[0].clientX-ts.x;
+  const dy=e.changedTouches[0].clientY-ts.y;
+  ts=null;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<22) return;
+  if(Math.abs(dx)>Math.abs(dy)) move(dx>0?1:-1,0);
+  else move(0,dy>0?1:-1);
+},{passive:true});
+
+// ══════════════════════════════════════
+//  Sound (Web Audio)
+// ══════════════════════════════════════
+let ac=null;
+function getAC() { return ac||(ac=new(window.AudioContext||window.webkitAudioContext)()); }
+
+function chime(type) {
+  try {
+    const a=getAC(), t=a.currentTime;
+    const notes = type==='rescue'
+      ? [[523,.0],[659,.13],[784,.26],[1047,.40]]
+      : [[523,.0],[659,.1],[784,.2],[880,.32],[1047,.46],[880,.58],[1047,.72]];
+    notes.forEach(([f,dt])=>{
+      const o=a.createOscillator(), g=a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(type==='win'?0.28:0.25, t+dt);
+      g.gain.exponentialRampToValueAtTime(.0001, t+dt+.38);
+      o.start(t+dt); o.stop(t+dt+.42);
+    });
+  } catch(_){}
+}
+
+// ══════════════════════════════════════
+//  Confetti
+// ══════════════════════════════════════
+const cf = document.getElementById('cfCanvas');
+const cfx = cf.getContext('2d');
+let pieces=[], cfGoing=false;
+const CCOLS=['#ff6b9d','#ffd43b','#74c0fc','#69db7c','#ff9f43','#da77f2','#ff6b6b'];
+
+function confettiStart() {
+  cf.width=window.innerWidth; cf.height=window.innerHeight;
+  pieces=Array.from({length:100},()=>({
+    x:Math.random()*cf.width, y:-30,
+    vx:(Math.random()-.5)*6, vy:Math.random()*4+1.5,
+    col:CCOLS[Math.floor(Math.random()*CCOLS.length)],
+    s:Math.random()*9+5, r:Math.random()*Math.PI*2, vr:(Math.random()-.5)*.18, vy2:0
+  }));
+  if(!cfGoing){cfGoing=true;cfLoop();}
+}
+function cfLoop() {
+  cfx.clearRect(0,0,cf.width,cf.height);
+  pieces.forEach(p=>{
+    p.x+=p.vx; p.vy+=.07; p.y+=p.vy; p.r+=p.vr;
+    cfx.save(); cfx.translate(p.x,p.y); cfx.rotate(p.r);
+    cfx.fillStyle=p.col; cfx.fillRect(-p.s/2,-p.s/2,p.s,p.s);
+    cfx.restore();
+  });
+  pieces=pieces.filter(p=>p.y<cf.height+30);
+  if(pieces.length){requestAnimationFrame(cfLoop);}
+  else{cfGoing=false;}
+}
+
+// ══════════════════════════════════════
+//  Start!
+// ══════════════════════════════════════
+init();
+startAnim();
+</script>
+</body>
+</html>

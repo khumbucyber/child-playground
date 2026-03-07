@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>こどもランド 🎪</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sky:   #d4f0ff;
+  --grass: #c8f5c0;
+  --sun:   #ffe066;
+  --coral: #ff8a7a;
+  --mint:  #5edbb8;
+  --lavender: #c4b0ff;
+  --ink:   #2a1f4e;
+  --card-r: 28px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  min-height: 100%;
+  font-family: 'Nunito', 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', sans-serif;
+  background: var(--sky);
+  overflow-x: hidden;
+}
+
+/* ── Sky + Cloud BG ── */
+body {
+  background:
+    radial-gradient(ellipse 340px 120px at 15% 22%, rgba(255,255,255,0.7) 0%, transparent 70%),
+    radial-gradient(ellipse 220px 90px  at 72% 14%, rgba(255,255,255,0.6) 0%, transparent 70%),
+    radial-gradient(ellipse 180px 70px  at 55% 35%, rgba(255,255,255,0.4) 0%, transparent 70%),
+    linear-gradient(180deg, #b8e8ff 0%, #d8f4ff 40%, #d4f5d0 100%);
+}
+
+/* ── Header ── */
+header {
+  text-align: center;
+  padding: 36px 20px 10px;
+  position: relative;
+}
+
+.sun {
+  width: 72px; height: 72px;
+  background: var(--sun);
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  box-shadow: 0 0 0 10px rgba(255,224,102,0.25), 0 0 0 20px rgba(255,224,102,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px;
+  animation: sunPulse 3s ease-in-out infinite;
+}
+@keyframes sunPulse {
+  0%,100% { box-shadow: 0 0 0 10px rgba(255,224,102,0.25), 0 0 0 20px rgba(255,224,102,0.12); }
+  50%      { box-shadow: 0 0 0 14px rgba(255,224,102,0.32), 0 0 0 28px rgba(255,224,102,0.14); }
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: 2px;
+  line-height: 1.1;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.9);
+}
+.subtitle {
+  font-size: 13px;
+  color: #5a7a6a;
+  margin-top: 6px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* ── Floating decorations ── */
+.deco {
+  position: fixed;
+  pointer-events: none;
+  font-size: 28px;
+  opacity: 0.55;
+  animation: floatDeco 6s ease-in-out infinite;
+  z-index: 0;
+}
+.deco:nth-child(1) { top: 8%;  left: 4%;  animation-delay: 0s;    font-size: 22px; }
+.deco:nth-child(2) { top: 12%; right: 6%; animation-delay: 1.4s;  font-size: 26px; }
+.deco:nth-child(3) { top: 32%; left: 2%;  animation-delay: 2.8s;  font-size: 18px; }
+.deco:nth-child(4) { top: 55%; right: 3%; animation-delay: 0.7s;  font-size: 20px; }
+.deco:nth-child(5) { top: 78%; left: 5%;  animation-delay: 3.5s;  font-size: 24px; }
+@keyframes floatDeco {
+  0%,100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-12px) rotate(4deg); }
+}
+
+/* ── Grid ── */
+main {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 16px;
+  padding: 20px 16px 40px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── Cards ── */
+.card {
+  border-radius: var(--card-r);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 14px 20px;
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1),
+              box-shadow 0.18s ease;
+  animation: cardIn 0.55s cubic-bezier(.34,1.56,.64,1) both;
+  -webkit-tap-highlight-color: transparent;
+}
+.card:nth-child(1) { animation-delay: 0.05s; }
+.card:nth-child(2) { animation-delay: 0.15s; }
+.card:nth-child(3) { animation-delay: 0.25s; }
+.card:nth-child(4) { animation-delay: 0.35s; }
+.card:nth-child(5) { animation-delay: 0.45s; }
+.card:nth-child(6) { animation-delay: 0.55s; }
+
+@keyframes cardIn {
+  from { opacity:0; transform: translateY(30px) scale(0.85); }
+  to   { opacity:1; transform: translateY(0)   scale(1); }
+}
+
+.card:active {
+  transform: scale(0.93);
+}
+
+/* Active card */
+.card.active {
+  box-shadow: 0 12px 36px rgba(0,0,0,0.14), 0 3px 0 rgba(0,0,0,0.06);
+}
+.card.active:hover {
+  transform: translateY(-5px) scale(1.03);
+  box-shadow: 0 20px 48px rgba(0,0,0,0.18), 0 3px 0 rgba(0,0,0,0.06);
+}
+
+/* Coming-soon card */
+.card.soon {
+  opacity: 0.62;
+  cursor: default;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+  filter: saturate(0.6);
+}
+
+/* Color themes */
+.card-maze    { background: linear-gradient(145deg, #fff5c8, #ffe8a0); }
+.card-draw    { background: linear-gradient(145deg, #ffd4ec, #ffb8de); }
+.card-music   { background: linear-gradient(145deg, #d4f0d0, #b0e8c8); }
+.card-quiz    { background: linear-gradient(145deg, #d0e8ff, #b8d8ff); }
+.card-story   { background: linear-gradient(145deg, #ffe0d0, #ffc8b0); }
+.card-puzzle  { background: linear-gradient(145deg, #e0d4ff, #ccc0ff); }
+
+.card-icon {
+  font-size: 56px;
+  line-height: 1;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.12));
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+.card.active:hover .card-icon {
+  transform: scale(1.15) rotate(-5deg);
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
+  text-align: center;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+}
+.card-desc {
+  font-size: 11px;
+  color: #6a5a8a;
+  text-align: center;
+  margin-top: 5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* "SOON" badge */
+.badge-soon {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(255,255,255,0.75);
+  color: #8a7aaa;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+}
+
+/* "NEW" badge */
+.badge-new {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: #ff6b6b;
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255,107,107,0.45);
+  animation: newPop 1.4s ease-in-out infinite;
+}
+@keyframes newPop {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 0 20px 32px;
+  font-size: 11px;
+  color: #8aaa9a;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+</style>
+</head>
+<body>
+
+<!-- Floating decorations -->
+<div class="deco">🌈</div>
+<div class="deco">⭐</div>
+<div class="deco">🍀</div>
+<div class="deco">🌸</div>
+<div class="deco">🎈</div>
+
+<header>
+  <div class="sun">🎪</div>
+  <h1>こども ランド</h1>
+  <p class="subtitle">あそびが いっぱい！ えらんでね 🎉</p>
+</header>
+
+<main>
+
+  <!-- ① ぼうけん迷路（公開中） -->
+  <a href="./bouken-meiro.html" class="card card-maze active">
+    <span class="badge-new">NEW</span>
+    <div class="card-icon">🐶</div>
+    <div class="card-title">ぼうけん めいろ</div>
+    <div class="card-desc">ワンちゃんを<br>ゴールまで<br>つれていこう！</div>
+  </a>
+
+  <!-- ② お絵かき（準備中） -->
+  <div class="card card-draw soon">
+    <span class="badge-soon">SOON</span>
+    <div class="card-icon">🎨</div>
+    <div class="card-title">おえかき</div>
+    <div class="card-desc">じゆうに<br>かいてみよう</div>
+  </div>
+
+  <!-- ③ おんがく（準備中） -->
+  <div class="card card-music soon">
+    <span class="badge-soon">SOON</span>
+    <div class="card-icon">🎹</div>
+    <div class="card-title">おんがく</div>
+    <div class="card-desc">おとを<br>たのしもう</div>
+  </div>
+
+  <!-- ④ クイズ（準備中） -->
+  <div class="card card-quiz soon">
+    <span class="badge-soon">SOON</span>
+    <div class="card-icon">🧠</div>
+    <div class="card-title">クイズ</div>
+    <div class="card-desc">なんでも<br>しってるかな？</div>
+  </div>
+
+  <!-- ⑤ おはなし（準備中） -->
+  <div class="card card-story soon">
+    <span class="badge-soon">SOON</span>
+    <div class="card-icon">📖</div>
+    <div class="card-title">おはなし</div>
+    <div class="card-desc">ふしぎな<br>ものがたり</div>
+  </div>
+
+  <!-- ⑥ パズル（準備中） -->
+  <div class="card card-puzzle soon">
+    <span class="badge-soon">SOON</span>
+    <div class="card-icon">🧩</div>
+    <div class="card-title">パズル</div>
+    <div class="card-desc">かたちを<br>あわせよう</div>
+  </div>
+
+</main>
+
+<footer>🌟 こどもランド — いつでもあそびにきてね 🌟</footer>
+
+</body>
+</html>
