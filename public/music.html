@@ -144,6 +144,75 @@ body {
 .song-btn:nth-child(2) { border-left: 6px solid #5bdb6b; }
 .song-btn:nth-child(3) { border-left: 6px solid #6ba0ff; }
 
+/* ─ Speed Slider ─ */
+.speed-box {
+  width: 100%;
+  max-width: 340px;
+  background: white;
+  border-radius: 18px;
+  padding: 14px 20px 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  margin-top: 14px;
+}
+.speed-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.speed-label {
+  font-size: 13px;
+  font-weight: 900;
+  color: #3a5a3a;
+}
+.speed-value {
+  font-size: 15px;
+  font-weight: 900;
+  color: #1a7a4a;
+  background: #e8faf0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  min-width: 60px;
+  text-align: center;
+}
+.speed-icons {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #7a9a7a;
+  font-weight: 700;
+  margin-top: 6px;
+}
+input[type=range].speed-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b0e8c8, #00c853);
+  outline: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+input[type=range].speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #00c853;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+input[type=range].speed-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #00c853;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
 /* ─ Countdown ─ */
 .countdown-num {
   font-size: 120px;
@@ -316,7 +385,7 @@ body {
   <div class="title-icon">🎹</div>
   <div class="title-text">おんがく リズムゲーム</div>
   <div class="title-sub">きょくをえらんでね！</div>
-  <div class="song-list">
+  <div class="song-list" style="margin-bottom:0">
     <button class="song-btn" data-song="kirakira" onclick="selectSong('kirakira')">
       <span class="song-emoji">⭐</span>
       <div class="song-info">
@@ -338,6 +407,20 @@ body {
         <div class="song-notes">ミ レ ド レ ミ ミ ミ…</div>
       </div>
     </button>
+  </div>
+
+  <!-- Speed Slider -->
+  <div class="speed-box">
+    <div class="speed-label-row">
+      <span class="speed-label">🐢 スピード</span>
+      <span class="speed-value" id="speed-display">ふつう</span>
+    </div>
+    <input type="range" class="speed-slider" id="speed-slider"
+      min="40" max="100" value="100" step="10">
+    <div class="speed-icons">
+      <span>ゆっくり</span>
+      <span>ふつう</span>
+    </div>
   </div>
 </div>
 
@@ -545,6 +628,23 @@ function startMetronome(bpm) {
 
 function stopMetronome() {
   if (metronomeId) { clearInterval(metronomeId); metronomeId = null; }
+}
+
+// ─────────────────────────────
+//  Speed
+// ─────────────────────────────
+let speedRate = 1.0; // 1.0=ふつう、0.4=いちばんゆっくり
+
+const SPEED_LABELS = { 100:'ふつう', 90:'すこしゆっくり', 80:'ゆっくり', 70:'もっとゆっくり', 60:'かなりゆっくり', 50:'とてもゆっくり', 40:'いちばんゆっくり' };
+
+function setupSpeedSlider() {
+  const slider = document.getElementById('speed-slider');
+  const display = document.getElementById('speed-display');
+  slider.addEventListener('input', () => {
+    const v = parseInt(slider.value);
+    speedRate = v / 100;
+    display.textContent = SPEED_LABELS[v] || v + '%';
+  });
 }
 
 // ─────────────────────────────
@@ -877,7 +977,9 @@ function startCountdown() {
 
 function startGame() {
   const song = SONGS[currentSongKey];
-  const b = beat(song.bpm);
+  // speedRate を適用：遅くするほど1拍の長さが伸びる
+  const effectiveBpm = song.bpm * speedRate;
+  const b = beat(effectiveBpm);
 
   // Build notes with absolute time
   notes = song.rawNotes.map(([lane, beatOffset, note]) => ({
@@ -903,7 +1005,7 @@ function startGame() {
   resizeCanvas();
 
   gameStartTime = performance.now() + NOTE_TRAVEL_TIME * 1000;
-  startMetronome(song.bpm);
+  startMetronome(effectiveBpm);
   animFrameId = requestAnimationFrame(gameLoop);
 }
 
@@ -984,6 +1086,7 @@ function setupButtons() {
 // ─────────────────────────────
 window.addEventListener('load', () => {
   setupButtons();
+  setupSpeedSlider();
   resizeCanvas();
 });
 
