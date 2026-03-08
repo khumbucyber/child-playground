@@ -95,10 +95,7 @@ body {
 .btn-secondary:active { transform: scale(0.94); }
 
 /* ── Game Screen ── */
-#screen-game {
-  position: relative;
-  overflow: hidden;
-}
+#screen-game { position: relative; overflow: hidden; }
 
 #game-header {
   flex-shrink: 0;
@@ -113,17 +110,8 @@ body {
   z-index: 10;
 }
 
-#game-stage-label {
-  font-size: 15px;
-  font-weight: 900;
-  color: #1a4a6e;
-}
-
-#game-score {
-  font-size: 18px;
-  font-weight: 900;
-  color: #e84393;
-}
+#game-stage-label { font-size: 15px; font-weight: 900; color: #1a4a6e; }
+#game-score { font-size: 18px; font-weight: 900; color: #e84393; }
 
 #btn-quit {
   background: rgba(0,0,0,0.08);
@@ -139,11 +127,12 @@ body {
   touch-action: manipulation;
 }
 
-/* Game field */
+/* Game field — touch-action: none でファインダードラッグを受け取る */
 #game-field {
   flex: 1;
   position: relative;
   overflow: hidden;
+  touch-action: none;
 }
 
 /* Subject */
@@ -153,21 +142,23 @@ body {
   line-height: 1;
   display: none;
   pointer-events: none;
-  transition: none;
   z-index: 5;
+  /* transform で位置制御 */
 }
 
-/* Finder */
+/* Finder — ドラッグ可能 */
 #finder {
   position: absolute;
   z-index: 6;
-  pointer-events: none;
+  cursor: grab;
+  touch-action: none;
 }
+#finder:active { cursor: grabbing; }
 
 .finder-corner {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-color: #1a1a1a;
   border-style: solid;
 }
@@ -184,6 +175,21 @@ body {
   inset: 0;
   background: rgba(255,255,255,0.08);
   border-radius: 4px;
+}
+
+/* ドラッグヒント */
+#finder-hint {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  pointer-events: none;
+  transition: opacity 0.5s;
 }
 
 /* Shutter area */
@@ -226,9 +232,7 @@ body {
   opacity: 0;
   pointer-events: none;
   z-index: 50;
-  transition: opacity 0.05s;
 }
-#flash.show { opacity: 1; transition: none; }
 
 /* Pop text */
 #pop-text {
@@ -275,22 +279,49 @@ body {
   width: 100%;
 }
 
+/* ポラロイドカード — 被写体の位置を内部でずらせるようにoverflowを制御 */
 .polaroid {
   background: white;
   border-radius: 4px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  padding: 10px 10px 24px;
-  width: 90px;
-  text-align: center;
+  padding: 6px 6px 20px;
+  width: 100px;
+  height: 110px;
+  overflow: hidden;
+  position: relative;
   animation: polaroidPop 0.4s cubic-bezier(.34,1.56,.64,1) both;
+  flex-shrink: 0;
 }
 @keyframes polaroidPop {
   from { opacity:0; transform: scale(0.5) rotate(-10deg); }
   to   { opacity:1; transform: scale(1) rotate(var(--rot, 0deg)); }
 }
 
-.polaroid-emoji { font-size: 40px; line-height: 1.2; }
-.polaroid-label { font-size: 10px; color: #888; font-weight: 700; margin-top: 4px; }
+.polaroid-scene {
+  width: 100%;
+  height: 76px;
+  background: linear-gradient(180deg, #87ceeb 0%, #b0e0f8 60%, #d4f0c0 100%);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.polaroid-subject {
+  position: absolute;
+  font-size: 40px;
+  line-height: 1;
+  /* transform で位置をずらす（JS から設定） */
+}
+
+.polaroid-label {
+  position: absolute;
+  bottom: 3px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 9px;
+  color: #888;
+  font-weight: 700;
+}
 
 .result-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
@@ -314,14 +345,13 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-  max-width: 320px;
+  max-width: 340px;
 }
 
 /* ── Confetti ── */
 #confetti-container {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  inset: 0;
   pointer-events: none;
   z-index: 100;
   overflow: hidden;
@@ -343,7 +373,7 @@ body {
 <div id="screen-title" class="screen active">
   <div class="title-emoji">📷</div>
   <div class="title-text">しゃしん ゲーム</div>
-  <div class="title-sub">うまく とれるかな？📸</div>
+  <div class="title-sub">ファインダーを うごかして とろう！📸</div>
   <button class="btn-primary" id="btn-start">はじめる！</button>
   <button class="btn-secondary" onclick="location.href='./index.html'">もどる</button>
 </div>
@@ -363,6 +393,7 @@ body {
       <div class="finder-corner tr"></div>
       <div class="finder-corner bl"></div>
       <div class="finder-corner br"></div>
+      <div id="finder-hint">ドラッグで うごかせるよ</div>
     </div>
   </div>
   <div id="shutter-area">
@@ -399,9 +430,9 @@ body {
 <script>
 // ── Stage config ──
 const STAGES = [
-  { label: 'ステージ１', emoji: '🐶', total: 5, required: 3, pattern: 'linear', speed: 3.5, yFixed: false, yCenter: false },
-  { label: 'ステージ２', emoji: '🦋', total: 6, required: 4, pattern: 'sine',   speed: 2.5, yFixed: false, yCenter: false },
-  { label: 'ステージ３', emoji: '🚂', total: 4, required: 3, pattern: 'linear', speed: 1.8, yFixed: true,  yCenter: true  },
+  { label: 'ステージ１', emoji: '🐶', total: 5, required: 3, pattern: 'linear', speed: 3.5, yCenter: false },
+  { label: 'ステージ２', emoji: '🦋', total: 6, required: 4, pattern: 'sine',   speed: 2.5, yCenter: false },
+  { label: 'ステージ３', emoji: '🚂', total: 4, required: 3, pattern: 'linear', speed: 1.8, yCenter: true  },
 ];
 
 // ── State ──
@@ -409,20 +440,76 @@ const state = {
   stage: 0,
   subjectCount: 0,
   capturedCount: 0,
-  allCaptures: [[], [], []],
+  allCaptures: [[], [], []],  // 各ステージの撮影データ {emoji, relX, relY}
   animFrameId: null,
   subject: null,
   intervalTimer: null,
 };
 
 // ── DOM refs ──
-const subjectEl   = document.getElementById('subject');
-const finderEl    = document.getElementById('finder');
-const scoreEl     = document.getElementById('game-score');
+const subjectEl    = document.getElementById('subject');
+const finderEl     = document.getElementById('finder');
+const scoreEl      = document.getElementById('game-score');
 const stageLabelEl = document.getElementById('game-stage-label');
-const flashEl     = document.getElementById('flash');
-const popEl       = document.getElementById('pop-text');
-const fieldEl     = document.getElementById('game-field');
+const flashEl      = document.getElementById('flash');
+const popEl        = document.getElementById('pop-text');
+const fieldEl      = document.getElementById('game-field');
+const hintEl       = document.getElementById('finder-hint');
+
+// ── Finder size & position ──
+let finderSize = 0;   // px（正方形）
+let finderX = 0;      // field内left
+let finderY = 0;      // field内top
+
+function setupFinder() {
+  const fw = fieldEl.clientWidth;
+  const fh = fieldEl.clientHeight;
+  finderSize = Math.round(fw * 0.38);
+  // 初期位置：中央やや上
+  finderX = Math.round((fw - finderSize) / 2);
+  finderY = Math.round(fh * 0.22);
+  applyFinderPos();
+}
+
+function applyFinderPos() {
+  finderEl.style.width  = finderSize + 'px';
+  finderEl.style.height = finderSize + 'px';
+  finderEl.style.left   = finderX + 'px';
+  finderEl.style.top    = finderY + 'px';
+}
+
+// ── Finder drag ──
+let dragging = false;
+let dragOffX = 0, dragOffY = 0;
+let hintHidden = false;
+
+finderEl.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  dragging = true;
+  finderEl.setPointerCapture(e.pointerId);
+  const fieldRect = fieldEl.getBoundingClientRect();
+  dragOffX = e.clientX - fieldRect.left - finderX;
+  dragOffY = e.clientY - fieldRect.top  - finderY;
+  // ヒントを隠す
+  if (!hintHidden) {
+    hintEl.style.opacity = '0';
+    hintHidden = true;
+  }
+});
+
+finderEl.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  e.stopPropagation();
+  const fieldRect = fieldEl.getBoundingClientRect();
+  const fw = fieldEl.clientWidth;
+  const fh = fieldEl.clientHeight;
+  finderX = Math.max(0, Math.min(fw - finderSize, e.clientX - fieldRect.left - dragOffX));
+  finderY = Math.max(0, Math.min(fh - finderSize, e.clientY - fieldRect.top  - dragOffY));
+  applyFinderPos();
+});
+
+finderEl.addEventListener('pointerup',     () => { dragging = false; });
+finderEl.addEventListener('pointercancel', () => { dragging = false; });
 
 // ── Audio ──
 function playSound(type) {
@@ -431,8 +518,7 @@ function playSound(type) {
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    osc.connect(gain); gain.connect(ctx.destination);
 
     if (type === 'hit') {
       osc.frequency.setValueAtTime(800, now);
@@ -448,74 +534,51 @@ function playSound(type) {
       osc.start(now); osc.stop(now + 0.2);
     } else if (type === 'clear') {
       [523, 659, 784, 1047].forEach((freq, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
+        const o = ctx.createOscillator(), g = ctx.createGain();
         o.connect(g); g.connect(ctx.destination);
         o.frequency.value = freq;
-        g.gain.setValueAtTime(0.3, now + i * 0.12);
-        g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
-        o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+        g.gain.setValueAtTime(0.3, now + i*0.12);
+        g.gain.exponentialRampToValueAtTime(0.01, now + i*0.12 + 0.3);
+        o.start(now + i*0.12); o.stop(now + i*0.12 + 0.3);
       });
     } else if (type === 'fanfare') {
       [523, 659, 784, 659, 784, 1047].forEach((freq, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
+        const o = ctx.createOscillator(), g = ctx.createGain();
         o.connect(g); g.connect(ctx.destination);
         o.frequency.value = freq;
-        g.gain.setValueAtTime(0.3, now + i * 0.1);
-        g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.25);
-        o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.25);
+        g.gain.setValueAtTime(0.3, now + i*0.1);
+        g.gain.exponentialRampToValueAtTime(0.01, now + i*0.1 + 0.25);
+        o.start(now + i*0.1); o.stop(now + i*0.1 + 0.25);
       });
     }
   } catch(e) {}
 }
 
-// ── Finder setup ──
-function setupFinder() {
-  const fieldW = fieldEl.clientWidth;
-  const fieldH = fieldEl.clientHeight;
-  const size = Math.round(fieldW * 0.35);
-  const left = Math.round((fieldW - size) / 2);
-  const top  = Math.round(fieldH * 0.25);
-  finderEl.style.width  = size + 'px';
-  finderEl.style.height = size + 'px';
-  finderEl.style.left   = left + 'px';
-  finderEl.style.top    = top  + 'px';
-}
-
-// ── Subject ──
+// ── Subject spawn ──
 function spawnSubject() {
   const cfg = STAGES[state.stage];
-  const fieldW = fieldEl.clientWidth;
-  const fieldH = fieldEl.clientHeight;
+  const fw = fieldEl.clientWidth;
+  const fh = fieldEl.clientHeight;
 
   const goRight = Math.random() < 0.5;
-  const startX  = goRight ? -70 : fieldW + 10;
-  let   startY;
-  if (cfg.yCenter) {
-    startY = fieldH * 0.45;
-  } else {
-    // Random Y, avoiding very top (header) and very bottom (shutter)
-    startY = fieldH * 0.2 + Math.random() * fieldH * 0.5;
-  }
+  const startX  = goRight ? -70 : fw + 10;
+  const startY  = cfg.yCenter
+    ? fh * 0.45
+    : fh * 0.15 + Math.random() * fh * 0.55;
 
   state.subject = {
-    x: startX,
-    y: startY,
-    startX,
-    startY,
+    x: startX, y: startY,
+    startX, startY,
     goRight,
-    speed: fieldW / cfg.speed, // px/s
+    speed: fw / cfg.speed,
     pattern: cfg.pattern,
     t: 0,
     active: true,
-    gone: false,
   };
 
   subjectEl.textContent = cfg.emoji;
   subjectEl.style.display = 'block';
-  subjectEl.style.transform = `translate(${startX}px, ${startY}px)`;
-  if (!goRight) subjectEl.style.transform += ' scaleX(-1)';
+  subjectEl.style.transform = `translate(${startX}px, ${startY}px)` + (goRight ? '' : ' scaleX(-1)');
 }
 
 // ── Game loop ──
@@ -529,34 +592,28 @@ function gameLoop(ts) {
   const sub = state.subject;
   if (sub && sub.active) {
     sub.t += dt;
-    const fieldW = fieldEl.clientWidth;
-    const fieldH = fieldEl.clientHeight;
+    const fw = fieldEl.clientWidth;
 
     sub.x += (sub.goRight ? 1 : -1) * sub.speed * dt;
-
     if (sub.pattern === 'sine') {
       sub.y = sub.startY + Math.sin(sub.t * (2 * Math.PI / 1.5)) * 60;
     }
 
-    const xf = sub.x;
-    const yf = sub.y;
-    subjectEl.style.transform = `translate(${xf}px, ${yf}px)` + (sub.goRight ? '' : ' scaleX(-1)');
+    subjectEl.style.transform = `translate(${sub.x}px, ${sub.y}px)` + (sub.goRight ? '' : ' scaleX(-1)');
 
-    // Check gone
-    if ((sub.goRight && sub.x > fieldW + 80) || (!sub.goRight && sub.x < -80)) {
+    // 画面外に出たか
+    if ((sub.goRight && sub.x > fw + 80) || (!sub.goRight && sub.x < -80)) {
       sub.active = false;
-      sub.gone = true;
       subjectEl.style.display = 'none';
       scheduleNextSubject();
     }
 
-    // Finder glow
-    const finderRect = finderEl.getBoundingClientRect();
-    const fieldRect  = fieldEl.getBoundingClientRect();
-    const cx = fieldRect.left + sub.x + 26; // center of emoji ~52px
-    const cy = fieldRect.top  + sub.y + 26;
-    const inside = cx >= finderRect.left && cx <= finderRect.right
-                && cy >= finderRect.top  && cy <= finderRect.bottom;
+    // ファインダー光らせる
+    const EMOJI_SIZE = 52;
+    const cx = sub.x + EMOJI_SIZE / 2;
+    const cy = sub.y + EMOJI_SIZE / 2;
+    const inside = cx >= finderX && cx <= finderX + finderSize
+                && cy >= finderY && cy <= finderY + finderSize;
     finderEl.classList.toggle('lit', inside);
   }
 
@@ -567,12 +624,11 @@ function scheduleNextSubject() {
   const cfg = STAGES[state.stage];
   state.subjectCount++;
 
-  if (state.subjectCount >= cfg.total && state.capturedCount < cfg.required) {
-    // All subjects shown but not enough captured — stage failed, go to result anyway
+  if (state.subjectCount >= cfg.total) {
+    // 全被写体終了
     setTimeout(() => endStage(), 1000);
     return;
   }
-  if (state.subjectCount >= cfg.total) return; // already handled by capture check
 
   const delay = 1000 + Math.random() * 1000;
   state.intervalTimer = setTimeout(() => {
@@ -586,47 +642,50 @@ document.getElementById('btn-shutter').addEventListener('click', () => {
   const cfg = STAGES[state.stage];
 
   if (!sub || !sub.active) {
-    // miss - no subject
     showPop('カシャ… 😅', false);
     playSound('miss');
     return;
   }
 
-  const finderRect = finderEl.getBoundingClientRect();
-  const fieldRect  = fieldEl.getBoundingClientRect();
-  const cx = fieldRect.left + sub.x + 26;
-  const cy = fieldRect.top  + sub.y + 26;
-  const inside = cx >= finderRect.left && cx <= finderRect.right
-              && cy >= finderRect.top  && cy <= finderRect.bottom;
+  const EMOJI_SIZE = 52;
+  const cx = sub.x + EMOJI_SIZE / 2;
+  const cy = sub.y + EMOJI_SIZE / 2;
+  const inside = cx >= finderX && cx <= finderX + finderSize
+              && cy >= finderY && cy <= finderY + finderSize;
 
   if (inside) {
-    // SUCCESS
     playSound('hit');
     doFlash();
     showPop('カシャッ！📸', true);
     sub.active = false;
     subjectEl.style.display = 'none';
 
+    // ファインダー内での被写体の相対位置を記録（ポラロイド用）
+    // relX/relY: ファインダー左上を基準にした被写体左上の位置
+    const relX = sub.x - finderX;
+    const relY = sub.y - finderY;
+    state.allCaptures[state.stage].push({ emoji: cfg.emoji, relX, relY });
     state.capturedCount++;
-    state.allCaptures[state.stage].push(cfg.emoji);
     updateScore();
 
     if (state.capturedCount >= cfg.required) {
-      // Stage clear!
       setTimeout(() => endStage(), 800);
     } else {
       scheduleNextSubject();
     }
   } else {
-    // MISS
     playSound('miss');
     showPop('カシャ… 😅', false);
   }
 });
 
 function doFlash() {
-  flashEl.classList.add('show');
-  setTimeout(() => flashEl.classList.remove('show'), 150);
+  flashEl.style.opacity = '1';
+  setTimeout(() => {
+    flashEl.style.transition = 'opacity 0.15s';
+    flashEl.style.opacity = '0';
+    setTimeout(() => { flashEl.style.transition = ''; }, 200);
+  }, 80);
 }
 
 function showPop(text, success) {
@@ -637,13 +696,11 @@ function showPop(text, success) {
 }
 
 function updateScore() {
-  const cfg = STAGES[state.stage];
-  scoreEl.textContent = `📸 ${state.capturedCount}/${cfg.required}`;
+  scoreEl.textContent = `📸 ${state.capturedCount}/${STAGES[state.stage].required}`;
 }
 
 // ── End stage ──
 function endStage() {
-  // Stop loop
   if (state.animFrameId) { cancelAnimationFrame(state.animFrameId); state.animFrameId = null; }
   if (state.intervalTimer) { clearTimeout(state.intervalTimer); state.intervalTimer = null; }
   lastTime = null;
@@ -652,27 +709,63 @@ function endStage() {
   const cfg = STAGES[state.stage];
   const cleared = state.capturedCount >= cfg.required;
 
-  // Build result screen
   document.getElementById('result-title').textContent =
     cleared ? `${cfg.label} クリア！🎉` : `${cfg.label} おわり！`;
 
+  // ポラロイドギャラリー構築
   const gallery = document.getElementById('polaroid-gallery');
   gallery.innerHTML = '';
-  state.allCaptures[state.stage].forEach((emoji, i) => {
-    const card = document.createElement('div');
-    card.className = 'polaroid';
-    card.style.setProperty('--rot', (Math.random() * 8 - 4) + 'deg');
-    card.style.animationDelay = (i * 0.1) + 's';
-    card.innerHTML = `<div class="polaroid-emoji">${emoji}</div><div class="polaroid-label">いい しゃしん！ 🌟</div>`;
-    gallery.appendChild(card);
+  state.allCaptures[state.stage].forEach((shot, i) => {
+    gallery.appendChild(makePolaroid(shot, i));
   });
 
-  // Show next or end button
   const isLast = state.stage >= STAGES.length - 1;
   document.getElementById('btn-next').textContent = isLast ? 'けっか みる！' : 'つぎへ！';
 
   showScreen('result');
   if (cleared) playSound('clear');
+}
+
+// ── ポラロイドカード生成 ──
+// shot = { emoji, relX, relY }
+// relX/relY はファインダーサイズ基準の相対座標
+// ポラロイドのシーン幅88px に等倍スケールして被写体を配置
+function makePolaroid(shot, idx) {
+  const SCENE_W = 88; // CSS px
+  const SCENE_H = 76;
+  const EMOJI_SIZE = 52; // ゲーム内の絵文字サイズ
+
+  // ゲーム内ファインダーサイズ → ポラロイドシーンサイズ のスケール比
+  const scale = SCENE_W / finderSize;
+
+  // ポラロイド内での絵文字の位置
+  const px = shot.relX * scale;
+  const py = shot.relY * scale;
+
+  const card = document.createElement('div');
+  card.className = 'polaroid';
+  card.style.setProperty('--rot', (Math.random() * 8 - 4) + 'deg');
+  card.style.animationDelay = (idx * 0.1) + 's';
+
+  const scene = document.createElement('div');
+  scene.className = 'polaroid-scene';
+
+  const subj = document.createElement('div');
+  subj.className = 'polaroid-subject';
+  subj.textContent = shot.emoji;
+  // 絵文字サイズもスケール
+  subj.style.fontSize = Math.round(EMOJI_SIZE * scale) + 'px';
+  subj.style.transform = `translate(${px}px, ${py}px)`;
+
+  scene.appendChild(subj);
+
+  const label = document.createElement('div');
+  label.className = 'polaroid-label';
+  label.textContent = 'いい しゃしん！ 🌟';
+
+  card.appendChild(scene);
+  card.appendChild(label);
+  return card;
 }
 
 document.getElementById('btn-next').addEventListener('click', () => {
@@ -689,7 +782,6 @@ document.getElementById('btn-end-early').addEventListener('click', showFinal);
 // ── Final ──
 function showFinal() {
   const total = state.allCaptures.flat().length;
-  const maxTotal = STAGES.reduce((s, c) => s + c.required, 0);
   const allClear = STAGES.every((cfg, i) => state.allCaptures[i].length >= cfg.required);
 
   document.getElementById('final-emoji').textContent = allClear ? '🏆' : '📷';
@@ -698,13 +790,8 @@ function showFinal() {
 
   const album = document.getElementById('final-album');
   album.innerHTML = '';
-  state.allCaptures.flat().forEach((emoji, i) => {
-    const card = document.createElement('div');
-    card.className = 'polaroid';
-    card.style.setProperty('--rot', (Math.random() * 10 - 5) + 'deg');
-    card.style.animationDelay = (i * 0.08) + 's';
-    card.innerHTML = `<div class="polaroid-emoji">${emoji}</div>`;
-    album.appendChild(card);
+  state.allCaptures.flat().forEach((shot, i) => {
+    album.appendChild(makePolaroid(shot, i));
   });
 
   showScreen('final');
@@ -729,11 +816,12 @@ function startStage() {
   scoreEl.textContent = `📸 0/${cfg.required}`;
   subjectEl.style.display = 'none';
   finderEl.classList.remove('lit');
+  hintHidden = false;
+  hintEl.style.opacity = '1';
 
   showScreen('game');
   setupFinder();
 
-  // Start first subject after short delay
   setTimeout(() => {
     spawnSubject();
     state.animFrameId = requestAnimationFrame(gameLoop);
@@ -753,7 +841,6 @@ document.getElementById('btn-quit').addEventListener('click', () => {
   showScreen('title');
 });
 
-// ── Helpers ──
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
@@ -777,7 +864,6 @@ function launchConfetti() {
   }
 }
 
-// Resize finder when orientation changes
 window.addEventListener('resize', () => {
   if (document.getElementById('screen-game').classList.contains('active')) {
     setupFinder();
