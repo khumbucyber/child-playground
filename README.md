@@ -19,7 +19,8 @@ child-playground/
 └── public/                 # Vercel公開ディレクトリ
     ├── index.html          # メニュー画面（こどもランド）
     ├── bouken-meiro.html   # ぼうけん迷路
-    └── tashite-goal.html   # たしてゴール！
+    ├── tashite-goal.html   # たしてゴール！
+    └── music.html          # おんがく リズムゲーム
 ```
 
 > 新しいコンテンツは `.html` ファイルを追加し、`index.html` のカードを更新するだけで拡充できます。
@@ -33,7 +34,7 @@ child-playground/
 | `bouken-meiro.html` | 🐶 ぼうけん めいろ | ✅ 公開中 | 4〜6歳 |
 | `tashite-goal.html` | 🔢 たして ゴール！ | ✅ 公開中 | 5歳〜小1 |
 | *(未作成)* | 🎨 おえかき | 🔜 準備中 | — |
-| *(未作成)* | 🎹 おんがく | 🔜 準備中 | — |
+| `music.html` | 🎹 おんがく | ✅ 公開中 | 5歳〜小1 |
 | *(未作成)* | 🧠 クイズ | 🔜 準備中 | — |
 | *(未作成)* | 📖 おはなし | 🔜 準備中 | — |
 
