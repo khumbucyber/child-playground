@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>📷 しゃしん ゲーム</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: linear-gradient(180deg, #87ceeb 0%, #b0e0f8 40%, #d4f0c0 100%);
+}
+
+/* ── Screens ── */
+.screen { display: none; flex-direction: column; height: 100%; }
+.screen.active { display: flex; }
+
+/* ── Title Screen ── */
+#screen-title {
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 32px 24px;
+  padding-top: max(32px, env(safe-area-inset-top));
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+}
+
+.title-emoji {
+  font-size: 80px;
+  animation: cameraPulse 2s ease-in-out infinite;
+}
+@keyframes cameraPulse {
+  0%,100% { transform: scale(1) rotate(-3deg); }
+  50%      { transform: scale(1.08) rotate(3deg); }
+}
+
+.title-text {
+  font-size: 32px;
+  font-weight: 900;
+  color: #1a4a6e;
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+  letter-spacing: 2px;
+}
+
+.title-sub {
+  font-size: 15px;
+  color: #3a6a8e;
+  font-weight: 700;
+  text-align: center;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 16px 48px;
+  font-size: 22px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(238,90,36,0.4);
+  touch-action: manipulation;
+  min-height: 60px;
+  transition: transform 0.15s;
+}
+.btn-primary:active { transform: scale(0.94); }
+
+.btn-secondary {
+  background: rgba(255,255,255,0.85);
+  color: #555;
+  border: 2px solid #ccc;
+  border-radius: 50px;
+  padding: 12px 36px;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 52px;
+  transition: transform 0.15s;
+}
+.btn-secondary:active { transform: scale(0.94); }
+
+/* ── Game Screen ── */
+#screen-game {
+  position: relative;
+  overflow: hidden;
+}
+
+#game-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+#game-stage-label {
+  font-size: 15px;
+  font-weight: 900;
+  color: #1a4a6e;
+}
+
+#game-score {
+  font-size: 18px;
+  font-weight: 900;
+  color: #e84393;
+}
+
+#btn-quit {
+  background: rgba(0,0,0,0.08);
+  border: none;
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #555;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+/* Game field */
+#game-field {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subject */
+#subject {
+  position: absolute;
+  font-size: 52px;
+  line-height: 1;
+  display: none;
+  pointer-events: none;
+  transition: none;
+  z-index: 5;
+}
+
+/* Finder */
+#finder {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.finder-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: #1a1a1a;
+  border-style: solid;
+}
+.finder-corner.tl { top:0; left:0;  border-width: 4px 0 0 4px; }
+.finder-corner.tr { top:0; right:0; border-width: 4px 4px 0 0; }
+.finder-corner.bl { bottom:0; left:0;  border-width: 0 0 4px 4px; }
+.finder-corner.br { bottom:0; right:0; border-width: 0 4px 4px 0; }
+
+#finder.lit .finder-corner { border-color: #00e676; }
+#finder.lit { box-shadow: inset 0 0 0 2px rgba(0,230,118,0.3); }
+
+#finder-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+}
+
+/* Shutter area */
+#shutter-area {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(4px);
+}
+
+#btn-shutter {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0f0f0, #bbb);
+  border: 4px solid #999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.8);
+  cursor: pointer;
+  touch-action: manipulation;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  transition: transform 0.1s;
+}
+#btn-shutter:active { transform: scale(0.9); }
+#btn-shutter span { font-size: 12px; font-weight: 900; color: #555; font-family: inherit; }
+
+/* Flash overlay */
+#flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+  transition: opacity 0.05s;
+}
+#flash.show { opacity: 1; transition: none; }
+
+/* Pop text */
+#pop-text {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 28px;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.5);
+  padding: 12px 24px;
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 51;
+  transition: transform 0.15s cubic-bezier(.34,1.56,.64,1);
+  white-space: nowrap;
+}
+#pop-text.show { transform: translate(-50%, -50%) scale(1); }
+
+/* ── Result Screen ── */
+#screen-result {
+  align-items: center;
+  padding: 20px 16px;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.result-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: #1a4a6e;
+  text-align: center;
+}
+
+#polaroid-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.polaroid {
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  padding: 10px 10px 24px;
+  width: 90px;
+  text-align: center;
+  animation: polaroidPop 0.4s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes polaroidPop {
+  from { opacity:0; transform: scale(0.5) rotate(-10deg); }
+  to   { opacity:1; transform: scale(1) rotate(var(--rot, 0deg)); }
+}
+
+.polaroid-emoji { font-size: 40px; line-height: 1.2; }
+.polaroid-label { font-size: 10px; color: #888; font-weight: 700; margin-top: 4px; }
+
+.result-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+/* ── Final Screen ── */
+#screen-final {
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 32px 24px;
+  padding-top: max(32px, env(safe-area-inset-top));
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.final-emoji { font-size: 64px; }
+.final-title { font-size: 28px; font-weight: 900; color: #1a4a6e; }
+.final-score { font-size: 20px; color: #e84393; font-weight: 900; }
+
+#final-album {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 320px;
+}
+
+/* ── Confetti ── */
+#confetti-container {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Title Screen -->
+<div id="screen-title" class="screen active">
+  <div class="title-emoji">📷</div>
+  <div class="title-text">しゃしん ゲーム</div>
+  <div class="title-sub">うまく とれるかな？📸</div>
+  <button class="btn-primary" id="btn-start">はじめる！</button>
+  <button class="btn-secondary" onclick="location.href='./index.html'">もどる</button>
+</div>
+
+<!-- Game Screen -->
+<div id="screen-game" class="screen">
+  <div id="game-header">
+    <div id="game-stage-label">📷 ステージ１</div>
+    <div id="game-score">📸 0/3</div>
+    <button id="btn-quit">やめる</button>
+  </div>
+  <div id="game-field">
+    <div id="subject">🐶</div>
+    <div id="finder">
+      <div id="finder-bg"></div>
+      <div class="finder-corner tl"></div>
+      <div class="finder-corner tr"></div>
+      <div class="finder-corner bl"></div>
+      <div class="finder-corner br"></div>
+    </div>
+  </div>
+  <div id="shutter-area">
+    <button id="btn-shutter">📷<span>とる！</span></button>
+  </div>
+</div>
+
+<!-- Stage Result Screen -->
+<div id="screen-result" class="screen">
+  <div class="result-title" id="result-title">ステージ１ クリア！🎉</div>
+  <div id="polaroid-gallery"></div>
+  <div class="result-buttons">
+    <button class="btn-primary" id="btn-next">つぎへ！</button>
+    <button class="btn-secondary" id="btn-end-early">おわり</button>
+  </div>
+</div>
+
+<!-- Final Screen -->
+<div id="screen-final" class="screen">
+  <div class="final-emoji" id="final-emoji">🏆</div>
+  <div class="final-title" id="final-title">さいこうの カメラマン！</div>
+  <div class="final-score" id="final-score"></div>
+  <div id="final-album"></div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn-primary" id="btn-replay">もういちど</button>
+    <button class="btn-secondary" onclick="location.href='./index.html'">もどる</button>
+  </div>
+</div>
+
+<div id="flash"></div>
+<div id="pop-text"></div>
+<div id="confetti-container"></div>
+
+<script>
+// ── Stage config ──
+const STAGES = [
+  { label: 'ステージ１', emoji: '🐶', total: 5, required: 3, pattern: 'linear', speed: 3.5, yFixed: false, yCenter: false },
+  { label: 'ステージ２', emoji: '🦋', total: 6, required: 4, pattern: 'sine',   speed: 2.5, yFixed: false, yCenter: false },
+  { label: 'ステージ３', emoji: '🚂', total: 4, required: 3, pattern: 'linear', speed: 1.8, yFixed: true,  yCenter: true  },
+];
+
+// ── State ──
+const state = {
+  stage: 0,
+  subjectCount: 0,
+  capturedCount: 0,
+  allCaptures: [[], [], []],
+  animFrameId: null,
+  subject: null,
+  intervalTimer: null,
+};
+
+// ── DOM refs ──
+const subjectEl   = document.getElementById('subject');
+const finderEl    = document.getElementById('finder');
+const scoreEl     = document.getElementById('game-score');
+const stageLabelEl = document.getElementById('game-stage-label');
+const flashEl     = document.getElementById('flash');
+const popEl       = document.getElementById('pop-text');
+const fieldEl     = document.getElementById('game-field');
+
+// ── Audio ──
+function playSound(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'hit') {
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+      osc.start(now); osc.stop(now + 0.25);
+    } else if (type === 'miss') {
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.15);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'clear') {
+      [523, 659, 784, 1047].forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.3, now + i * 0.12);
+        g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
+        o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+      });
+    } else if (type === 'fanfare') {
+      [523, 659, 784, 659, 784, 1047].forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.3, now + i * 0.1);
+        g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.25);
+        o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.25);
+      });
+    }
+  } catch(e) {}
+}
+
+// ── Finder setup ──
+function setupFinder() {
+  const fieldW = fieldEl.clientWidth;
+  const fieldH = fieldEl.clientHeight;
+  const size = Math.round(fieldW * 0.35);
+  const left = Math.round((fieldW - size) / 2);
+  const top  = Math.round(fieldH * 0.25);
+  finderEl.style.width  = size + 'px';
+  finderEl.style.height = size + 'px';
+  finderEl.style.left   = left + 'px';
+  finderEl.style.top    = top  + 'px';
+}
+
+// ── Subject ──
+function spawnSubject() {
+  const cfg = STAGES[state.stage];
+  const fieldW = fieldEl.clientWidth;
+  const fieldH = fieldEl.clientHeight;
+
+  const goRight = Math.random() < 0.5;
+  const startX  = goRight ? -70 : fieldW + 10;
+  let   startY;
+  if (cfg.yCenter) {
+    startY = fieldH * 0.45;
+  } else {
+    // Random Y, avoiding very top (header) and very bottom (shutter)
+    startY = fieldH * 0.2 + Math.random() * fieldH * 0.5;
+  }
+
+  state.subject = {
+    x: startX,
+    y: startY,
+    startX,
+    startY,
+    goRight,
+    speed: fieldW / cfg.speed, // px/s
+    pattern: cfg.pattern,
+    t: 0,
+    active: true,
+    gone: false,
+  };
+
+  subjectEl.textContent = cfg.emoji;
+  subjectEl.style.display = 'block';
+  subjectEl.style.transform = `translate(${startX}px, ${startY}px)`;
+  if (!goRight) subjectEl.style.transform += ' scaleX(-1)';
+}
+
+// ── Game loop ──
+let lastTime = null;
+
+function gameLoop(ts) {
+  if (!lastTime) lastTime = ts;
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+
+  const sub = state.subject;
+  if (sub && sub.active) {
+    sub.t += dt;
+    const fieldW = fieldEl.clientWidth;
+    const fieldH = fieldEl.clientHeight;
+
+    sub.x += (sub.goRight ? 1 : -1) * sub.speed * dt;
+
+    if (sub.pattern === 'sine') {
+      sub.y = sub.startY + Math.sin(sub.t * (2 * Math.PI / 1.5)) * 60;
+    }
+
+    const xf = sub.x;
+    const yf = sub.y;
+    subjectEl.style.transform = `translate(${xf}px, ${yf}px)` + (sub.goRight ? '' : ' scaleX(-1)');
+
+    // Check gone
+    if ((sub.goRight && sub.x > fieldW + 80) || (!sub.goRight && sub.x < -80)) {
+      sub.active = false;
+      sub.gone = true;
+      subjectEl.style.display = 'none';
+      scheduleNextSubject();
+    }
+
+    // Finder glow
+    const finderRect = finderEl.getBoundingClientRect();
+    const fieldRect  = fieldEl.getBoundingClientRect();
+    const cx = fieldRect.left + sub.x + 26; // center of emoji ~52px
+    const cy = fieldRect.top  + sub.y + 26;
+    const inside = cx >= finderRect.left && cx <= finderRect.right
+                && cy >= finderRect.top  && cy <= finderRect.bottom;
+    finderEl.classList.toggle('lit', inside);
+  }
+
+  state.animFrameId = requestAnimationFrame(gameLoop);
+}
+
+function scheduleNextSubject() {
+  const cfg = STAGES[state.stage];
+  state.subjectCount++;
+
+  if (state.subjectCount >= cfg.total && state.capturedCount < cfg.required) {
+    // All subjects shown but not enough captured — stage failed, go to result anyway
+    setTimeout(() => endStage(), 1000);
+    return;
+  }
+  if (state.subjectCount >= cfg.total) return; // already handled by capture check
+
+  const delay = 1000 + Math.random() * 1000;
+  state.intervalTimer = setTimeout(() => {
+    if (state.animFrameId) spawnSubject();
+  }, delay);
+}
+
+// ── Shutter ──
+document.getElementById('btn-shutter').addEventListener('click', () => {
+  const sub = state.subject;
+  const cfg = STAGES[state.stage];
+
+  if (!sub || !sub.active) {
+    // miss - no subject
+    showPop('カシャ… 😅', false);
+    playSound('miss');
+    return;
+  }
+
+  const finderRect = finderEl.getBoundingClientRect();
+  const fieldRect  = fieldEl.getBoundingClientRect();
+  const cx = fieldRect.left + sub.x + 26;
+  const cy = fieldRect.top  + sub.y + 26;
+  const inside = cx >= finderRect.left && cx <= finderRect.right
+              && cy >= finderRect.top  && cy <= finderRect.bottom;
+
+  if (inside) {
+    // SUCCESS
+    playSound('hit');
+    doFlash();
+    showPop('カシャッ！📸', true);
+    sub.active = false;
+    subjectEl.style.display = 'none';
+
+    state.capturedCount++;
+    state.allCaptures[state.stage].push(cfg.emoji);
+    updateScore();
+
+    if (state.capturedCount >= cfg.required) {
+      // Stage clear!
+      setTimeout(() => endStage(), 800);
+    } else {
+      scheduleNextSubject();
+    }
+  } else {
+    // MISS
+    playSound('miss');
+    showPop('カシャ… 😅', false);
+  }
+});
+
+function doFlash() {
+  flashEl.classList.add('show');
+  setTimeout(() => flashEl.classList.remove('show'), 150);
+}
+
+function showPop(text, success) {
+  popEl.textContent = text;
+  popEl.style.background = success ? 'rgba(0,180,80,0.8)' : 'rgba(180,0,80,0.6)';
+  popEl.classList.add('show');
+  setTimeout(() => popEl.classList.remove('show'), success ? 900 : 600);
+}
+
+function updateScore() {
+  const cfg = STAGES[state.stage];
+  scoreEl.textContent = `📸 ${state.capturedCount}/${cfg.required}`;
+}
+
+// ── End stage ──
+function endStage() {
+  // Stop loop
+  if (state.animFrameId) { cancelAnimationFrame(state.animFrameId); state.animFrameId = null; }
+  if (state.intervalTimer) { clearTimeout(state.intervalTimer); state.intervalTimer = null; }
+  lastTime = null;
+  finderEl.classList.remove('lit');
+
+  const cfg = STAGES[state.stage];
+  const cleared = state.capturedCount >= cfg.required;
+
+  // Build result screen
+  document.getElementById('result-title').textContent =
+    cleared ? `${cfg.label} クリア！🎉` : `${cfg.label} おわり！`;
+
+  const gallery = document.getElementById('polaroid-gallery');
+  gallery.innerHTML = '';
+  state.allCaptures[state.stage].forEach((emoji, i) => {
+    const card = document.createElement('div');
+    card.className = 'polaroid';
+    card.style.setProperty('--rot', (Math.random() * 8 - 4) + 'deg');
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.innerHTML = `<div class="polaroid-emoji">${emoji}</div><div class="polaroid-label">いい しゃしん！ 🌟</div>`;
+    gallery.appendChild(card);
+  });
+
+  // Show next or end button
+  const isLast = state.stage >= STAGES.length - 1;
+  document.getElementById('btn-next').textContent = isLast ? 'けっか みる！' : 'つぎへ！';
+
+  showScreen('result');
+  if (cleared) playSound('clear');
+}
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (state.stage >= STAGES.length - 1) {
+    showFinal();
+  } else {
+    state.stage++;
+    startStage();
+  }
+});
+
+document.getElementById('btn-end-early').addEventListener('click', showFinal);
+
+// ── Final ──
+function showFinal() {
+  const total = state.allCaptures.flat().length;
+  const maxTotal = STAGES.reduce((s, c) => s + c.required, 0);
+  const allClear = STAGES.every((cfg, i) => state.allCaptures[i].length >= cfg.required);
+
+  document.getElementById('final-emoji').textContent = allClear ? '🏆' : '📷';
+  document.getElementById('final-title').textContent = allClear ? 'さいこうの カメラマン！' : 'よく とれたね！';
+  document.getElementById('final-score').textContent = `とれた しゃしん：${total} まい`;
+
+  const album = document.getElementById('final-album');
+  album.innerHTML = '';
+  state.allCaptures.flat().forEach((emoji, i) => {
+    const card = document.createElement('div');
+    card.className = 'polaroid';
+    card.style.setProperty('--rot', (Math.random() * 10 - 5) + 'deg');
+    card.style.animationDelay = (i * 0.08) + 's';
+    card.innerHTML = `<div class="polaroid-emoji">${emoji}</div>`;
+    album.appendChild(card);
+  });
+
+  showScreen('final');
+  if (allClear) { playSound('fanfare'); launchConfetti(); }
+}
+
+document.getElementById('btn-replay').addEventListener('click', () => {
+  state.stage = 0;
+  state.allCaptures = [[], [], []];
+  startStage();
+});
+
+// ── Start stage ──
+function startStage() {
+  const cfg = STAGES[state.stage];
+  state.subjectCount = 0;
+  state.capturedCount = 0;
+  state.subject = null;
+  lastTime = null;
+
+  stageLabelEl.textContent = `📷 ${cfg.label}`;
+  scoreEl.textContent = `📸 0/${cfg.required}`;
+  subjectEl.style.display = 'none';
+  finderEl.classList.remove('lit');
+
+  showScreen('game');
+  setupFinder();
+
+  // Start first subject after short delay
+  setTimeout(() => {
+    spawnSubject();
+    state.animFrameId = requestAnimationFrame(gameLoop);
+  }, 800);
+}
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  state.stage = 0;
+  state.allCaptures = [[], [], []];
+  startStage();
+});
+
+document.getElementById('btn-quit').addEventListener('click', () => {
+  if (state.animFrameId) { cancelAnimationFrame(state.animFrameId); state.animFrameId = null; }
+  if (state.intervalTimer) { clearTimeout(state.intervalTimer); state.intervalTimer = null; }
+  lastTime = null;
+  showScreen('title');
+});
+
+// ── Helpers ──
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+function launchConfetti() {
+  const container = document.getElementById('confetti-container');
+  const colors = ['#ff4757','#ffa502','#ffdd59','#7bed9f','#1e90ff','#a29bfe','#fd79a8'];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.width  = (6 + Math.random() * 8) + 'px';
+    p.style.height = (6 + Math.random() * 8) + 'px';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    p.style.animationDelay    = (Math.random() * 0.5) + 's';
+    p.style.animationDuration = (1.2 + Math.random() * 0.8) + 's';
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 2000);
+  }
+}
+
+// Resize finder when orientation changes
+window.addEventListener('resize', () => {
+  if (document.getElementById('screen-game').classList.contains('active')) {
+    setupFinder();
+  }
+});
+</script>
+</body>
+</html>

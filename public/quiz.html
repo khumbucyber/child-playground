@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🧠 クイズ</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  touch-action: manipulation;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: linear-gradient(160deg, #1a1a4e 0%, #2d1b6e 50%, #3d1060 100%);
+  color: white;
+  overflow: hidden;
+}
+
+/* ── Stars background ── */
+#stars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s);
+}
+@keyframes twinkle {
+  0%,100% { opacity: 0.2; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.3); }
+}
+
+/* ── Screens ── */
+.screen { display: none; flex-direction: column; height: 100%; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+
+/* ── Title Screen ── */
+#screen-title {
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 40px 24px;
+  padding-top: max(40px, env(safe-area-inset-top));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+}
+
+.fox-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.fox { font-size: 72px; animation: foxBounce 2s ease-in-out infinite; }
+@keyframes foxBounce {
+  0%,100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-10px) rotate(3deg); }
+}
+
+.bubble {
+  background: white;
+  color: #2d1b6e;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-size: 18px;
+  font-weight: 900;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top-color: white;
+  border-bottom: none;
+}
+
+.title-main { font-size: 34px; font-weight: 900; letter-spacing: 2px; text-align: center; }
+
+.btn-start {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 18px 56px;
+  font-size: 24px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(238,90,36,0.45);
+  touch-action: manipulation;
+  min-height: 64px;
+  transition: transform 0.15s;
+}
+.btn-start:active { transform: scale(0.93); }
+
+.btn-back-title {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.9);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50px;
+  padding: 12px 36px;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 52px;
+  transition: transform 0.15s;
+}
+.btn-back-title:active { transform: scale(0.93); }
+
+/* ── Quiz Screen ── */
+#screen-quiz {
+  padding-top: max(0px, env(safe-area-inset-top));
+  padding-bottom: max(0px, env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+#quiz-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 6px;
+  gap: 10px;
+}
+
+#question-counter {
+  font-size: 14px;
+  font-weight: 900;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+#progress-bar-wrap {
+  flex: 1;
+  height: 10px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+  overflow: hidden;
+}
+#progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4757, #ff6b81, #ffa502, #ffdd59, #7bed9f, #1e90ff, #a29bfe);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+#btn-back-quiz {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 44px;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+
+/* Subject badge */
+.subject-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  margin: 4px auto 0;
+  text-align: center;
+}
+.badge-こくご  { background: #ff6b81; color: white; }
+.badge-さんすう { background: #ffa502; color: white; }
+.badge-りか    { background: #2ed573; color: white; }
+.badge-しゃかい { background: #1e90ff; color: white; }
+.badge-たいいく { background: #ff4757; color: white; }
+.badge-えいご  { background: #a29bfe; color: white; }
+
+/* Question card */
+#question-card {
+  flex-shrink: 0;
+  margin: 8px 14px 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 14px 16px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+#question-emoji { font-size: 48px; line-height: 1; }
+#question-text  {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+/* Options */
+#options-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 12px;
+  overflow: hidden;
+  justify-content: center;
+}
+
+.option-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 14px 18px;
+  min-height: 60px;
+  font-size: 17px;
+  font-weight: 900;
+  color: white;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: left;
+  transition: transform 0.12s, background 0.2s, border-color 0.2s;
+  width: 100%;
+}
+.option-btn:active:not(:disabled) { transform: scale(0.97); }
+
+.option-num {
+  font-size: 20px;
+  font-weight: 900;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.option-btn.correct {
+  background: #00b894;
+  border-color: #00b894;
+  animation: correctPop 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes correctPop {
+  from { transform: scale(0.95); }
+  to   { transform: scale(1); }
+}
+
+.option-btn.wrong {
+  background: #d63031;
+  border-color: #d63031;
+}
+
+/* Feedback */
+#feedback {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 30px;
+  font-weight: 900;
+  background: rgba(0,0,0,0.6);
+  padding: 14px 28px;
+  border-radius: 24px;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1);
+}
+#feedback.show { transform: translate(-50%, -50%) scale(1); }
+
+/* Fox character */
+#fox-char {
+  position: absolute;
+  bottom: 100px;
+  right: 10px;
+  font-size: 40px;
+  pointer-events: none;
+  z-index: 10;
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+#fox-char.correct-react { transform: scale(1.4) rotate(10deg); }
+#fox-char.wrong-react   { transform: scale(0.8) rotate(-10deg); }
+
+/* ── Result Screen ── */
+#screen-result {
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 32px 24px;
+  padding-top: max(32px, env(safe-area-inset-top));
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.result-score {
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 1;
+}
+.result-label { font-size: 24px; font-weight: 900; }
+.result-message { font-size: 22px; opacity: 0.9; }
+
+.result-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+.btn-retry {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 16px 40px;
+  font-size: 20px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(108,92,231,0.4);
+  touch-action: manipulation;
+  min-height: 60px;
+  transition: transform 0.15s;
+}
+.btn-retry:active { transform: scale(0.93); }
+
+.btn-home {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50px;
+  padding: 14px 36px;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 56px;
+  transition: transform 0.15s;
+}
+.btn-home:active { transform: scale(0.93); }
+
+/* ── Confetti ── */
+#confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div id="stars"></div>
+
+<!-- Title Screen -->
+<div id="screen-title" class="screen active">
+  <div class="fox-bubble">
+    <div class="fox">🦊</div>
+    <div class="bubble">もんだいを だすよ！</div>
+  </div>
+  <div class="title-main">🧠 クイズ</div>
+  <button class="btn-start" id="btn-start">はじめる！</button>
+  <button class="btn-back-title" onclick="location.href='./index.html'">もどる</button>
+</div>
+
+<!-- Quiz Screen -->
+<div id="screen-quiz" class="screen">
+  <div id="quiz-header">
+    <div id="question-counter">もんだい 1 / 10</div>
+    <div id="progress-bar-wrap"><div id="progress-bar" style="width:0%"></div></div>
+    <button id="btn-back-quiz">もどる</button>
+  </div>
+  <div id="question-card">
+    <div id="subject-badge-wrap"></div>
+    <div id="question-emoji">🐄</div>
+    <div id="question-text">うしは どんな こえで なく？</div>
+  </div>
+  <div id="options-wrap"></div>
+  <div id="feedback"></div>
+  <div id="fox-char">🦊</div>
+</div>
+
+<!-- Result Screen -->
+<div id="screen-result" class="screen">
+  <div class="result-score" id="result-score">7 / 10</div>
+  <div class="result-label">もんせい！</div>
+  <div class="result-message" id="result-message">よくできました！😊</div>
+  <div class="result-buttons">
+    <button class="btn-retry" id="btn-retry">もういちど</button>
+    <button class="btn-home" onclick="location.href='./index.html'">もどる</button>
+  </div>
+</div>
+
+<div id="confetti-container"></div>
+
+<script>
+// ── Stars ──
+(function() {
+  const container = document.getElementById('stars');
+  for (let i = 0; i < 60; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = 1 + Math.random() * 3;
+    s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--delay:${Math.random()*4}s;`;
+    container.appendChild(s);
+  }
+})();
+
+// ── Questions ──
+const QUESTIONS = [
+  { emoji:'🐄', text:'うしは どんな こえで なく？', options:['もー','わんわん','にゃー'], answer:0, subject:'こくご' },
+  { emoji:'🐸', text:'かえるは どんな こえで なく？', options:['ちゅんちゅん','けろけろ','ぶーぶー'], answer:1, subject:'こくご' },
+  { emoji:'🎵', text:'「あいうえお」は なんこ の もじ？', options:['３こ','４こ','５こ'], answer:2, subject:'こくご' },
+  { emoji:'🍎', text:'「りんご」を うしろから よむと？', options:['ごんり','ごりん','りごん'], answer:1, subject:'こくご' },
+  { emoji:'🌸', text:'さくらの はなびらの いろは なにいろ？', options:['ピンク・しろ','きいろ','あお'], answer:0, subject:'こくご' },
+  { emoji:'📖', text:'「おおきい」の はんたいごは？', options:['ながい','たかい','ちいさい'], answer:2, subject:'こくご' },
+  { emoji:'🔵', text:'「あお」は えいごで なんという？', options:['ブルー','レッド','グリーン'], answer:0, subject:'こくご' },
+  { emoji:'🌊', text:'「うみ」と「かわ」、みずが しおからいのは どちら？', options:['うみ','かわ','どちらも おなじ'], answer:0, subject:'こくご' },
+  { emoji:'👂', text:'ことばを きくとき つかう からだの ぶぶんは？', options:['め','みみ','はな'], answer:1, subject:'こくご' },
+  { emoji:'🐶', text:'「いぬ」を さかさに よむと？', options:['いぬ','ぬい','にぬ'], answer:1, subject:'こくご' },
+  { emoji:'🎈', text:'「あかい ふうせん」の「あかい」は なにを あらわす？', options:['いろ','かたち','おおきさ'], answer:0, subject:'こくご' },
+  { emoji:'🧊', text:'こおりを さわると どんな かんじ？', options:['あつい','やわらかい','つめたい'], answer:2, subject:'こくご' },
+  { emoji:'🐔', text:'にわとりは どんな こえで なく？', options:['ひひーん','もーもー','こけこっこ'], answer:2, subject:'こくご' },
+  { emoji:'🗣️', text:'「はやく はしる」の「はやく」は なにを せつめい している？', options:['どんなふうに','どこで','だれが'], answer:0, subject:'こくご' },
+  { emoji:'🌙', text:'「つき」を べつの ことばで いうと？', options:['スター','サン','ムーン'], answer:2, subject:'こくご' },
+  { emoji:'🤔', text:'「うれしい」と にた いみの ことばは？', options:['かなしい','たのしい','こわい'], answer:1, subject:'こくご' },
+  { emoji:'🍑', text:'「もも」は なんの なかまの くだもの？', options:['やさい','くだもの','おかし'], answer:1, subject:'こくご' },
+  { emoji:'🍬', text:'あめが ３こ あって ２こ もらったら ぜんぶで？', options:['５こ','４こ','６こ'], answer:0, subject:'さんすう' },
+  { emoji:'🎂', text:'ろうそくが ８ほん あって ３ほん けしたら？', options:['４ほん','６ほん','５ほん'], answer:2, subject:'さんすう' },
+  { emoji:'🔷', text:'さんかくの かどは いくつ？', options:['３つ','２つ','４つ'], answer:0, subject:'さんすう' },
+  { emoji:'⬜', text:'しかくの かどは いくつ？', options:['３つ','５つ','４つ'], answer:2, subject:'さんすう' },
+  { emoji:'🐾', text:'いぬが ３びき いる。あしは ぜんぶで なんぼん？', options:['８ぼん','１２ぼん','１０ぼん'], answer:1, subject:'さんすう' },
+  { emoji:'🕐', text:'とけいの すうじは １から いくつまで？', options:['１０','１２','１１'], answer:1, subject:'さんすう' },
+  { emoji:'🥚', text:'たまごが １０こ。はんぶんは？', options:['５こ','４こ','６こ'], answer:0, subject:'さんすう' },
+  { emoji:'✏️', text:'３ ＋ ４ は？', options:['６','７','８'], answer:1, subject:'さんすう' },
+  { emoji:'🌟', text:'１０ は ３ と いくつ？', options:['６','８','７'], answer:2, subject:'さんすう' },
+  { emoji:'📏', text:'１メートルは なんセンチ？', options:['１００センチ','１０センチ','１０００センチ'], answer:0, subject:'さんすう' },
+  { emoji:'🎲', text:'さいころの めは １から いくつまで？', options:['４','６','５'], answer:1, subject:'さんすう' },
+  { emoji:'🍕', text:'ぴざを ４つに きると なんきれ？', options:['２きれ','３きれ','４きれ'], answer:2, subject:'さんすう' },
+  { emoji:'🔢', text:'２ × ５ は？', options:['１０','８','１２'], answer:0, subject:'さんすう' },
+  { emoji:'🎯', text:'１２ から ５ を ひくと？', options:['６','８','７'], answer:2, subject:'さんすう' },
+  { emoji:'🧮', text:'いちばん おおきい かずは どれ？', options:['９','１９','９１'], answer:2, subject:'さんすう' },
+  { emoji:'🐟', text:'きんぎょが ６ぴき。３ぴき にがすと なんびき のこる？', options:['２ひき','３ひき','４ひき'], answer:1, subject:'さんすう' },
+  { emoji:'🚌', text:'バスに ７にん のっている。５にん おりたら？', options:['２にん','１にん','３にん'], answer:0, subject:'さんすう' },
+  { emoji:'🌱', text:'たねを そだてるのに いちばん たいせつな ものは？', options:['みず・ひかり・つち','おかし','おもちゃ'], answer:0, subject:'りか' },
+  { emoji:'🌞', text:'たいようは どちらから でる？', options:['にし','ひがし','きた'], answer:1, subject:'りか' },
+  { emoji:'🌡️', text:'こおりを あたためると なにに なる？', options:['みず','いし','すな'], answer:0, subject:'りか' },
+  { emoji:'🌈', text:'にじに ある いろは なんしょく？', options:['７しょく','５しょく','６しょく'], answer:0, subject:'りか' },
+  { emoji:'🦋', text:'ちょうちょは たまごから どんな じゅんで おとなに なる？', options:['たまご→ようむし→さなぎ→ちょうちょ','たまご→ちょうちょ','たまご→さなぎ→ちょうちょ'], answer:0, subject:'りか' },
+  { emoji:'🧲', text:'じしゃくが くっつくのは どれ？', options:['かみ','きのえんぴつ','てつのくぎ'], answer:2, subject:'りか' },
+  { emoji:'🫁', text:'にんげんが いきを するとき つかう からだの ぶぶんは？', options:['えら','はい','おなか'], answer:1, subject:'りか' },
+  { emoji:'🌙', text:'つきは どうして ひかって みえる？', options:['じぶんで ひかる','でんき','たいようの ひかりを はんしゃ'], answer:2, subject:'りか' },
+  { emoji:'🍂', text:'きの はっぱが いろ づくのは どの きせつ？', options:['はる','なつ','あき'], answer:2, subject:'りか' },
+  { emoji:'⚡', text:'かみなりが おちると どんな おとが する？', options:['ざーざー','ぴかぴか','ごろごろ'], answer:2, subject:'りか' },
+  { emoji:'🐠', text:'さかなは なにで こきゅうする？', options:['はい','えら','しっぽ'], answer:1, subject:'りか' },
+  { emoji:'🌻', text:'ひまわりは どちらの ほうを むく？', options:['きた','たいよう（ひ）','つき'], answer:1, subject:'りか' },
+  { emoji:'❤️', text:'しんぞうは からだの どこに ある？', options:['むね','おなか','あたま'], answer:0, subject:'りか' },
+  { emoji:'🦴', text:'にんげんの からだの なかに ほねは あるか？', options:['ある','ない','ひとに よって ちがう'], answer:0, subject:'りか' },
+  { emoji:'🌊', text:'うみのみずは どんな あじ？', options:['あまい','しおからい','からい'], answer:1, subject:'りか' },
+  { emoji:'🌧️', text:'あめは どこから ふってくる？', options:['やま','うみ','くも'], answer:2, subject:'りか' },
+  { emoji:'🌷', text:'はるに よく さく はなは どれ？', options:['たんぽぽ・さくら','ひまわり','コスモス'], answer:0, subject:'りか' },
+  { emoji:'🚒', text:'かじを けすのは だれの しごと？', options:['けいさつかん','おいしゃさん','しょうぼうし'], answer:2, subject:'しゃかい' },
+  { emoji:'🚑', text:'きゅうきゅうしゃは どんなとき くる？', options:['かいもの','おでかけ','けがや びょうき'], answer:2, subject:'しゃかい' },
+  { emoji:'🏣', text:'てがみや にもつを とどけるのは どこ？', options:['ゆうびんきょく','としょかん','びょういん'], answer:0, subject:'しゃかい' },
+  { emoji:'🗾', text:'にほんの しゅとは どこ？', options:['おおさか','とうきょう','きょうと'], answer:1, subject:'しゃかい' },
+  { emoji:'🏔️', text:'にほんで いちばん たかい やまは？', options:['ふじさん','エベレスト','あさまやま'], answer:0, subject:'しゃかい' },
+  { emoji:'🚦', text:'しんごうの あおは どんな いみ？', options:['すすんで いい','とまれ','きをつけて'], answer:0, subject:'しゃかい' },
+  { emoji:'♻️', text:'かんきょうを まもるために ごみは どうする？', options:['どこでも すてる','ぶんべつして すてる','うめる'], answer:1, subject:'しゃかい' },
+  { emoji:'🗓️', text:'１ねんは なんかげつ？', options:['１０かげつ','１１かげつ','１２かげつ'], answer:2, subject:'しゃかい' },
+  { emoji:'🏞️', text:'にほんで いちばん ながい かわは？', options:['よどがわ','しなのがわ','とねがわ'], answer:1, subject:'しゃかい' },
+  { emoji:'🌍', text:'にほんが ある たいりくは？', options:['ヨーロッパ','アフリカ','アジア'], answer:2, subject:'しゃかい' },
+  { emoji:'🚸', text:'みちを わたるのは どこ？', options:['どこでも わたれる','おうだんほどう','くるまの とおるところ'], answer:1, subject:'しゃかい' },
+  { emoji:'🏦', text:'おかねを あずけたり かりたり できる ところは？', options:['ぎんこう','びょういん','がっこう'], answer:0, subject:'しゃかい' },
+  { emoji:'🚓', text:'どろぼうを つかまえるのは だれ？', options:['しょうぼうし','うんてんし','けいさつかん'], answer:2, subject:'しゃかい' },
+  { emoji:'🗼', text:'とうきょうタワーが ある まちは？', options:['おおさか','とうきょう','なごや'], answer:1, subject:'しゃかい' },
+  { emoji:'🌏', text:'ちきゅうの たいぶぶんを おおっているのは？', options:['みず（うみ）','つち','こおり'], answer:0, subject:'しゃかい' },
+  { emoji:'🚌', text:'たくさんの ひとを はこぶ のりものは？', options:['じてんしゃ','バス','スクーター'], answer:1, subject:'しゃかい' },
+  { emoji:'⚽', text:'サッカーで ボールを いれる ところは？', options:['バスケット','ゴール','ホームベース'], answer:1, subject:'たいいく' },
+  { emoji:'🏀', text:'バスケットボールで てんを いれるには？', options:['ゴールに けりこむ','ネットを やぶる','リングに なげいれる'], answer:2, subject:'たいいく' },
+  { emoji:'🎾', text:'テニスで つかう どうぐは？', options:['ラケット','バット','クラブ'], answer:0, subject:'たいいく' },
+  { emoji:'🏊', text:'プールで はしっては いけない りゆうは？', options:['すべって きけんだから','つかれるから','おとが うるさいから'], answer:0, subject:'たいいく' },
+  { emoji:'⚾', text:'やきゅうで ボールを うつ どうぐは？', options:['ラケット','クラブ','バット'], answer:2, subject:'たいいく' },
+  { emoji:'🤸', text:'でんぐりがえしで さいしょに つくのは？', options:['あし','て・あたま','おしり'], answer:1, subject:'たいいく' },
+  { emoji:'🎿', text:'スキーを する ばしょは？', options:['うみ','さばく','ゆきやま'], answer:2, subject:'たいいく' },
+  { emoji:'🏓', text:'たっきゅうで つかう ボールは？', options:['ちいさい まるい たま','おおきい ボール','たまご'], answer:0, subject:'たいいく' },
+  { emoji:'💪', text:'きんにくを つよく するためには？', options:['ねてばかりいる','おかしを たべる','うんどうする'], answer:2, subject:'たいいく' },
+  { emoji:'🧘', text:'うんどうの まえに するのは？', options:['じゅんびうんどう','しょくじ','おふろ'], answer:0, subject:'たいいく' },
+  { emoji:'🏐', text:'バレーボールで てんを とるには？', options:['ボールを てで なげる','あいての コートに ボールを おとす','ボールを けって いれる'], answer:1, subject:'たいいく' },
+  { emoji:'🚴', text:'じてんしゃを うごかすには？', options:['エンジンを かける','ペダルを こぐ','ひっぱる'], answer:1, subject:'たいいく' },
+  { emoji:'🏃', text:'はやく はしるには？', options:['あしを おおきく うごかす','ゆっくり あるく','てを ポケットに いれる'], answer:0, subject:'たいいく' },
+  { emoji:'🤼', text:'じゅうどうは どこで する？', options:['プール','こおりの うえ','たたみの うえ'], answer:2, subject:'たいいく' },
+  { emoji:'🧗', text:'クライミングは なにを する スポーツ？', options:['かべを のぼる','みずに もぐる','そらを とぶ'], answer:0, subject:'たいいく' },
+  { emoji:'🏒', text:'こおりの うえで する スポーツは？', options:['サッカー','アイスホッケー','やきゅう'], answer:1, subject:'たいいく' },
+  { emoji:'🍎', text:'「りんご」は えいごで？', options:['Banana（バナナ）','Apple（アップル）','Orange（オレンジ）'], answer:1, subject:'えいご' },
+  { emoji:'🐱', text:'「ねこ」は えいごで？', options:['Dog（ドッグ）','Bird（バード）','Cat（キャット）'], answer:2, subject:'えいご' },
+  { emoji:'☀️', text:'「たいよう」は えいごで？', options:['Moon（ムーン）','Sun（サン）','Star（スター）'], answer:1, subject:'えいご' },
+  { emoji:'🎨', text:'「あか」は えいごで？', options:['Blue（ブルー）','Green（グリーン）','Red（レッド）'], answer:2, subject:'えいご' },
+  { emoji:'💛', text:'「きいろ」は えいごで？', options:['Yellow（イエロー）','Pink（ピンク）','White（ホワイト）'], answer:0, subject:'えいご' },
+  { emoji:'1️⃣', text:'「いち」は えいごで？', options:['Two（トゥー）','Three（スリー）','One（ワン）'], answer:2, subject:'えいご' },
+  { emoji:'🐕', text:'「いぬ」は えいごで？', options:['Dog（ドッグ）','Cat（キャット）','Fish（フィッシュ）'], answer:0, subject:'えいご' },
+  { emoji:'🏠', text:'「いえ」は えいごで？', options:['School（スクール）','House（ハウス）','Car（カー）'], answer:1, subject:'えいご' },
+  { emoji:'⭐', text:'「ほし」は えいごで？', options:['Sun（サン）','Moon（ムーン）','Star（スター）'], answer:2, subject:'えいご' },
+  { emoji:'🐟', text:'「さかな」は えいごで？', options:['Fish（フィッシュ）','Bird（バード）','Frog（フロッグ）'], answer:0, subject:'えいご' },
+  { emoji:'📕', text:'「ほん」は えいごで？', options:['Pen（ペン）','Book（ブック）','Bag（バッグ）'], answer:1, subject:'えいご' },
+  { emoji:'🚗', text:'「くるま」は えいごで？', options:['Train（トレイン）','Bus（バス）','Car（カー）'], answer:2, subject:'えいご' },
+  { emoji:'🌸', text:'「はな」は えいごで？', options:['Tree（ツリー）','Flower（フラワー）','Grass（グラス）'], answer:1, subject:'えいご' },
+  { emoji:'🎂', text:'「ケーキ」は えいごで？', options:['Cookie（クッキー）','Cake（ケーキ）','Candy（キャンディ）'], answer:1, subject:'えいご' },
+  { emoji:'🤚', text:'「て」は えいごで？', options:['Foot（フット）','Head（ヘッド）','Hand（ハンド）'], answer:2, subject:'えいご' },
+  { emoji:'🎵', text:'「うた」は えいごで？', options:['Song（ソング）','Dance（ダンス）','Play（プレイ）'], answer:0, subject:'えいご' },
+  { emoji:'🌙', text:'「つき」は えいごで？', options:['Moon（ムーン）','Sun（サン）','Cloud（クラウド）'], answer:0, subject:'えいご' },
+];
+
+// ── Game state ──
+let currentQuestions = [];
+let currentIdx = 0;
+let score = 0;
+const TOTAL = 10;
+
+// ── Audio ──
+function playSound(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    if (type === 'correct') {
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.setValueAtTime(659, now + 0.1);
+      osc.frequency.setValueAtTime(784, now + 0.2);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5);
+    } else {
+      osc.frequency.setValueAtTime(250, now);
+      osc.frequency.setValueAtTime(180, now + 0.15);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+      osc.start(now); osc.stop(now + 0.35);
+    }
+  } catch(e) {}
+}
+
+// ── Shuffle ──
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── Start game ──
+function startGame() {
+  currentQuestions = shuffle(QUESTIONS).slice(0, TOTAL);
+  currentIdx = 0;
+  score = 0;
+  showScreen('quiz');
+  showQuestion();
+}
+
+// ── Show question ──
+function showQuestion() {
+  const q = currentQuestions[currentIdx];
+
+  document.getElementById('question-counter').textContent = `もんだい ${currentIdx + 1} / ${TOTAL}`;
+  document.getElementById('progress-bar').style.width = (currentIdx / TOTAL * 100) + '%';
+  document.getElementById('question-emoji').textContent = q.emoji;
+  document.getElementById('question-text').textContent = q.text;
+
+  // Badge
+  const badgeWrap = document.getElementById('subject-badge-wrap');
+  badgeWrap.innerHTML = `<span class="subject-badge badge-${q.subject}">${q.subject}</span>`;
+
+  // Options
+  const wrap = document.getElementById('options-wrap');
+  wrap.innerHTML = '';
+  const nums = ['①','②','③'];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-num">${nums[i]}</span><span>${opt}</span>`;
+    btn.addEventListener('click', () => handleAnswer(i, q.answer));
+    wrap.appendChild(btn);
+  });
+
+  // Fox reset
+  const fox = document.getElementById('fox-char');
+  fox.classList.remove('correct-react', 'wrong-react');
+
+  // Feedback hide
+  const fb = document.getElementById('feedback');
+  fb.classList.remove('show');
+}
+
+// ── Handle answer ──
+function handleAnswer(chosen, correct) {
+  // Disable all buttons
+  document.querySelectorAll('.option-btn').forEach(btn => btn.disabled = true);
+
+  const btns = document.querySelectorAll('.option-btn');
+  const fox  = document.getElementById('fox-char');
+  const fb   = document.getElementById('feedback');
+
+  if (chosen === correct) {
+    btns[chosen].classList.add('correct');
+    fb.textContent = 'ピンポーン🎉';
+    fb.classList.add('show');
+    fox.classList.add('correct-react');
+    playSound('correct');
+    score++;
+  } else {
+    btns[chosen].classList.add('wrong');
+    btns[correct].classList.add('correct');
+    fb.textContent = 'ざんねん！😢';
+    fb.classList.add('show');
+    fox.classList.add('wrong-react');
+    playSound('wrong');
+  }
+
+  setTimeout(() => {
+    currentIdx++;
+    if (currentIdx >= TOTAL) {
+      showResult();
+    } else {
+      showQuestion();
+    }
+  }, 1200);
+}
+
+// ── Result ──
+function showResult() {
+  document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById('result-score').textContent = `${score} / ${TOTAL}`;
+
+  let msg;
+  if (score === TOTAL)      msg = 'まんてん！すごい！🏆';
+  else if (score >= 8)      msg = 'すごい！🌟';
+  else if (score >= 5)      msg = 'よくできました！😊';
+  else                      msg = 'またちょうせん！💪';
+
+  document.getElementById('result-message').textContent = msg;
+  showScreen('result');
+
+  if (score === TOTAL) launchConfetti();
+}
+
+// ── Confetti ──
+function launchConfetti() {
+  const container = document.getElementById('confetti-container');
+  const colors = ['#ff4757','#ffa502','#ffdd59','#7bed9f','#1e90ff','#a29bfe','#fd79a8'];
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.width  = (6 + Math.random() * 8) + 'px';
+    p.style.height = (6 + Math.random() * 8) + 'px';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    p.style.animationDelay    = (Math.random() * 0.6) + 's';
+    p.style.animationDuration = (1.5 + Math.random() * 1.0) + 's';
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 2500);
+  }
+}
+
+// ── Helpers ──
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+// ── Events ──
+document.getElementById('btn-start').addEventListener('click', startGame);
+document.getElementById('btn-retry').addEventListener('click', startGame);
+document.getElementById('btn-back-quiz').addEventListener('click', () => showScreen('title'));
+</script>
+</body>
+</html>
