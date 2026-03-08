@@ -158,8 +158,32 @@ body {
   white-space: nowrap;
 }
 
-#btn-undo { color: #ff7675; }
+#btn-undo  { color: #ff7675; }
 #btn-clear { color: #e84393; }
+#btn-save  { color: #0984e3; }
+
+/* ── Save toast ── */
+#save-toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(9,132,227,0.92);
+  color: white;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 10px 22px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 200;
+}
+#save-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 
 /* ── Confetti ── */
 #confetti-container {
@@ -219,10 +243,12 @@ body {
   </div>
   <div style="display:flex;gap:6px;align-items:center;">
     <button class="action-btn" id="btn-undo">↩ もどす</button>
+    <button class="action-btn" id="btn-save">💾 ほぞん</button>
     <button class="action-btn" id="btn-clear">🗑 きれいに</button>
   </div>
 </div>
 
+<div id="save-toast"></div>
 <div id="confetti-container"></div>
 <div id="clear-flash"></div>
 
@@ -390,6 +416,43 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   setTimeout(() => { fl.style.transition = 'opacity 0.4s'; fl.style.opacity = '0'; }, 80);
   setTimeout(() => { fl.style.transition = ''; }, 500);
 });
+
+// ── Save / Share ──
+document.getElementById('btn-save').addEventListener('click', async () => {
+  // キャンバスを PNG の Blob に変換
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  const filename = 'oekaki.png';
+
+  // ① Web Share API (files) — iOS Safari 15.1+ / Android Chrome 対応
+  if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
+    try {
+      await navigator.share({
+        files: [new File([blob], filename, { type: 'image/png' })],
+        title: 'おえかき',
+      });
+      showToast('シェアしたよ！📤');
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return; // キャンセル
+    }
+  }
+
+  // ② <a download> — Android Chrome / デスクトップ
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  showToast('ほぞんしたよ！💾');
+});
+
+function showToast(msg) {
+  const t = document.getElementById('save-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
 
 function launchConfetti() {
   const container = document.getElementById('confetti-container');
