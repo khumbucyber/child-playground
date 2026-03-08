@@ -144,6 +144,17 @@ body {
 }
 .cbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(80,50,140,0.2); }
 .cbtn.empty { background: transparent; box-shadow: none; pointer-events: none; }
+.cbtn.hammer-btn { background: #fff8e0; color: #c07000; font-size: 20px; }
+.cbtn.hammer-btn.hammer-on {
+  background: linear-gradient(135deg, #ffe066, #ffb300);
+  color: white;
+  box-shadow: 0 4px 0 rgba(180,100,0,0.35), 0 0 12px rgba(255,180,0,0.7);
+  animation: hammerPulse 0.6s ease-in-out infinite;
+}
+@keyframes hammerPulse {
+  0%,100% { box-shadow: 0 4px 0 rgba(180,100,0,0.35), 0 0 12px rgba(255,180,0,0.7); }
+  50%      { box-shadow: 0 4px 0 rgba(180,100,0,0.35), 0 0 22px rgba(255,180,0,1.0); }
+}
 
 /* ─ Overlay（キャラ選択・ポップアップ共通） ─ */
 .overlay {
@@ -251,7 +262,7 @@ body {
   <button class="cbtn" id="bU">▲</button>
   <div class="cbtn empty"></div>
   <button class="cbtn" id="bL">◀</button>
-  <div class="cbtn empty"></div>
+  <button class="cbtn hammer-btn" id="bHammer">🔨</button>
   <button class="cbtn" id="bR">▶</button>
   <div class="cbtn empty"></div>
   <button class="cbtn" id="bD">▼</button>
@@ -344,6 +355,7 @@ function selectChara(key) {
   document.getElementById('headerSub').textContent =
     `${selectedChara.emoji} ${selectedChara.name}を ゴールまで つれていこう！`;
   init();
+  updateHammerBtn();
   startAnim();
 }
 
@@ -450,6 +462,7 @@ let totalMembers = 1;      // 先頭 + 助けた仲間の合計
 let currentLeader = null;  // 現在操作中のキャラ描画情報 {emoji, drawFn}
 let hammerPos = null;
 let hasHammer = false;
+let hammerMode = false;  // ONのとき次の壁衝突で破壊
 let poops = [];
 let goalDone = false;
 
@@ -498,6 +511,7 @@ function init() {
     }
   }
   hasHammer = false;
+  hammerMode = false;
 
   // ── うんち配置（解答経路外のセルからランダムに選ぶ） ──
   const offPath = [];
@@ -712,9 +726,12 @@ function draw() {
   const px=(player.x+0.5)*cs, py=(player.y+0.5)*cs;
   currentLeader.drawPlayer(gfx, px, py, cs, t0);
 
-  // ハンマー所持中アイコン
-  if (hasHammer) {
-    gfx.font=`${cs*0.32}px serif`;
+  // ハンマーモード中：プレイヤー右上に強調表示
+  if (hasHammer && hammerMode) {
+    gfx.font=`${cs*0.38}px serif`;
+    gfx.fillText('🔨', px + cs*0.28, py - cs*0.28);
+  } else if (hasHammer) {
+    gfx.font=`${cs*0.28}px serif`;
     gfx.fillText('🔨', px + cs*0.28, py - cs*0.28);
   }
 
@@ -738,7 +755,7 @@ function move(dx, dy) {
   const wi = (dx===0) ? (dy<0?N:S) : (dx>0?E:W);
 
   if (grid[y][x].w[wi]) {
-    if (hasHammer) breakWall(x, y, dx, dy, wi);
+    if (hasHammer && hammerMode) breakWall(x, y, dx, dy, wi);
     return;
   }
 
@@ -757,9 +774,45 @@ function breakWall(x, y, dx, dy, wi) {
   grid[y][x].w[wi] = 0;
   grid[ny][nx].w[oppDir(wi)] = 0;
   hasHammer = false;
+  hammerMode = false;
+  updateHammerBtn();
+
+  // ── ハンマーを遠い場所に再出現 ──
+  // BFSでプレイヤー現在位置から最も遠いセルを探す
+  hammerPos = findFarCell(player.x, player.y);
+
   chime('hammer');
   draw();
   showBreakWallPopup();
+}
+
+// プレイヤー位置からBFSで最も遠いセル（ゴール・CP・うんち・現在位置を除く）を返す
+function findFarCell(sx, sy) {
+  const dist = Array.from({length:ROWS}, ()=>Array(COLS).fill(-1));
+  const q = [{x:sx, y:sy}];
+  dist[sy][sx] = 0;
+  let farthest = {x:sx, y:sy};
+  while (q.length) {
+    const {x,y} = q.shift();
+    for (const {dx,dy,w} of DIRS) {
+      const nx=x+dx, ny=y+dy;
+      if (nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&dist[ny][nx]===-1&&!grid[y][x].w[w]) {
+        dist[ny][nx] = dist[y][x]+1;
+        q.push({x:nx,y:ny});
+        // 遠い候補（ゴール・現在位置・CPを除く）
+        const isGoal = nx===COLS-1&&ny===ROWS-1;
+        const isStart = nx===0&&ny===0;
+        const isCP = cps.some(c=>c.x===nx&&c.y===ny);
+        const isPoop = poops.some(p=>p.x===nx&&p.y===ny);
+        if (!isGoal&&!isStart&&!isCP&&!isPoop) {
+          if (dist[ny][nx] > dist[farthest.y][farthest.x]) {
+            farthest = {x:nx, y:ny};
+          }
+        }
+      }
+    }
+  }
+  return farthest;
 }
 
 function checkTriggers() {
@@ -767,7 +820,9 @@ function checkTriggers() {
   if (hammerPos && !hasHammer &&
       player.x === hammerPos.x && player.y === hammerPos.y) {
     hasHammer = true;
+    hammerMode = false;
     hammerPos = null;
+    updateHammerBtn();
     chime('item');
     showHammerPopup();
     return;
@@ -892,12 +947,36 @@ function showHammerPopup() {
   document.getElementById('overlay').classList.add('show');
 }
 
+function toggleHammerMode() {
+  if (!hasHammer) return;
+  hammerMode = !hammerMode;
+  updateHammerBtn();
+}
+
+function updateHammerBtn() {
+  const btn = document.getElementById('bHammer');
+  if (!btn) return;
+  if (!hasHammer) {
+    btn.classList.remove('hammer-on');
+    btn.style.opacity = '0.35';
+    btn.style.pointerEvents = 'none';
+  } else if (hammerMode) {
+    btn.classList.add('hammer-on');
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  } else {
+    btn.classList.remove('hammer-on');
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  }
+}
+
 function showBreakWallPopup() {
   pActive = true;
   document.getElementById('pEmoji').textContent = '💥';
   document.getElementById('pTitle').textContent = '💥 かべを こわした！';
   document.getElementById('pText').textContent =
-    'ハンマーで かべを ドーン！\nみちが ひらいたよ！\nすすもう！';
+    'ハンマーで かべを ドーン！\nみちが ひらいたよ！\n\nハンマーは とおいばしょに\nおちているよ！とりにいこう！';
   const btn = document.getElementById('pBtn');
   btn.className = 'pbtn';
   btn.textContent = 'すすむ！ ➡️';
@@ -934,6 +1013,8 @@ function returnToStart() {
     document.getElementById(`fl${i}`).className='flabel';
   });
   currentLeader = { emoji: selectedChara.emoji, drawPlayer: selectedChara.drawPlayer };
+  hammerMode = false;
+  updateHammerBtn();
   document.getElementById('headerSub').textContent =
     `${selectedChara.emoji} ${selectedChara.name}を ゴールまで つれていこう！`;
   draw();
@@ -946,6 +1027,7 @@ document.getElementById('bU').addEventListener('pointerdown', e=>{e.preventDefau
 document.getElementById('bD').addEventListener('pointerdown', e=>{e.preventDefault();move(0,1);});
 document.getElementById('bL').addEventListener('pointerdown', e=>{e.preventDefault();move(-1,0);});
 document.getElementById('bR').addEventListener('pointerdown', e=>{e.preventDefault();move(1,0);});
+document.getElementById('bHammer').addEventListener('pointerdown', e=>{e.preventDefault();toggleHammerMode();});
 
 document.addEventListener('keydown', e=>{
   const m={'ArrowUp':[0,-1],'ArrowDown':[0,1],'ArrowLeft':[-1,0],'ArrowRight':[1,0]};
