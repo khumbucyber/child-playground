@@ -277,21 +277,6 @@ body {
   <div class="pcard">
     <div class="ptitle">🎮 キャラを えらんでね！</div>
     <div class="chara-row">
-      <button class="chara-btn" onclick="selectChara('wa')">
-        <span class="chara-icon">👧🏻</span>
-        <span class="chara-name">わーちゃん</span>
-        <span class="chara-sub">くろかみの おんなのこ</span>
-      </button>
-      <button class="chara-btn" onclick="selectChara('tomo')">
-        <span class="chara-icon">👦</span>
-        <span class="chara-name">ともくん</span>
-        <span class="chara-sub">くろかみの おとこのこ</span>
-      </button>
-      <button class="chara-btn" onclick="selectChara('tacchun')">
-        <span class="chara-icon">👦</span>
-        <span class="chara-name">たっちゅん</span>
-        <span class="chara-sub">ちゃいろいかみの ちびっこ</span>
-      </button>
       <button class="chara-btn" onclick="selectChara('primo')">
         <span class="chara-icon">🐩</span>
         <span class="chara-name">ぷりも</span>
@@ -301,6 +286,21 @@ body {
         <span class="chara-icon">🐕</span>
         <span class="chara-name">おもち</span>
         <span class="chara-sub">しろいイヌ</span>
+      </button>
+      <button class="chara-btn" onclick="selectChara('wa')">
+        <span class="chara-icon">👧🏻</span>
+        <span class="chara-name">わかちゃん</span>
+        <span class="chara-sub">くろかみの おんなのこ</span>
+      </button>
+      <button class="chara-btn" onclick="selectChara('tomo')">
+        <span class="chara-icon">👦</span>
+        <span class="chara-name">ともくん</span>
+        <span class="chara-sub">くろかみの おとこのこ</span>
+      </button>
+      <button class="chara-btn" onclick="selectChara('tacchun')">
+        <span class="chara-icon">👦</span>
+        <span class="chara-name">たっくん</span>
+        <span class="chara-sub">ちゃいろいかみの ちびっこ</span>
       </button>
       <button class="chara-btn" onclick="selectChara('oto')">
         <span class="chara-icon">👧</span>
@@ -330,9 +330,12 @@ body {
 //  キャラクター定義
 // ══════════════════════════════════════
 
-// キャンバスにキャラを描く共通ヘルパー
+// キャンバスにキャラを描く共通ヘルパー（save/restoreで状態を分離）
 function makeDrawPlayer(emoji, glowRgb, shadowRgb, bgColor) {
   return function(gfx, px, py, cs, t0) {
+    gfx.save();
+    gfx.textAlign = 'center';
+    gfx.textBaseline = 'middle';
     const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
     gfx.fillStyle = `rgba(${glowRgb},${0.28*glow})`;
     gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
@@ -343,10 +346,16 @@ function makeDrawPlayer(emoji, glowRgb, shadowRgb, bgColor) {
     gfx.shadowBlur = 0;
     gfx.font = `${cs*0.72}px serif`;
     gfx.fillText(emoji, px, py);
+    gfx.restore();
   };
 }
 
 const CHARAS = {
+  primo: {
+    emoji: '🐩',
+    name: 'ぷりも',
+    drawPlayer: makeDrawPlayer('🐩', '200,160,100', '160,110,50', '#fff8f0')
+  },
   omochi: {
     emoji: '🐕',
     name: 'おもち',
@@ -359,7 +368,7 @@ const CHARAS = {
   },
   wa: {
     emoji: '👧🏻',
-    name: 'わーちゃん',
+    name: 'わかちゃん',
     drawPlayer: makeDrawPlayer('👧🏻', '160,210,255', '80,160,255', '#f0f8ff')
   },
   tomo: {
@@ -369,19 +378,19 @@ const CHARAS = {
   },
   tacchun: {
     emoji: '👦',
-    name: 'たっちゅん',
+    name: 'たっくん',
     drawPlayer(gfx, px, py, cs, t0) {
-      // グロー
+      gfx.save();
+      gfx.textAlign = 'center';
+      gfx.textBaseline = 'middle';
       const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
       gfx.fillStyle = `rgba(255,200,130,${0.28*glow})`;
       gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
-      // 背景円
       gfx.fillStyle = '#fffaf0';
       gfx.shadowColor = 'rgba(200,130,60,0.8)';
       gfx.shadowBlur = cs*0.4;
       gfx.beginPath(); gfx.arc(px, py, cs*0.42, 0, Math.PI*2); gfx.fill();
       gfx.shadowBlur = 0;
-      // ベース絵文字（普通の肌色の男の子）
       gfx.font = `${cs*0.72}px serif`;
       gfx.fillText('👦', px, py);
       // 茶色い髪を上から重ね描き
@@ -389,12 +398,8 @@ const CHARAS = {
       gfx.beginPath();
       gfx.ellipse(px, py - cs*0.26, cs*0.28, cs*0.18, 0, 0, Math.PI*2);
       gfx.fill();
+      gfx.restore();
     }
-  },
-  primo: {
-    emoji: '🐩',
-    name: 'ぷりも',
-    drawPlayer: makeDrawPlayer('🐩', '200,160,100', '160,110,50', '#fff8f0')
   }
 };
 
