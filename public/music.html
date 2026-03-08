@@ -161,6 +161,8 @@ body {
 #game-screen {
   flex-direction: column;
   padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  justify-content: flex-start;
 }
 
 #game-canvas {
@@ -176,7 +178,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-  padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 4px 6px;
   background: rgba(255,255,255,0.25);
   backdrop-filter: blur(4px);
 }
@@ -205,6 +207,19 @@ body {
 .lane-btn:nth-child(2) { background: linear-gradient(170deg, #ffca3a, #ff9800); }
 .lane-btn:nth-child(3) { background: linear-gradient(170deg, #69f0ae, #00c853); }
 .lane-btn:nth-child(4) { background: linear-gradient(170deg, #40c4ff, #0091ea); }
+
+.key-hint {
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  opacity: 0.8;
+  margin-top: 2px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
 
 /* ─ Result Screen ─ */
 .result-title {
@@ -347,10 +362,10 @@ body {
   "></div>
   <canvas id="game-canvas"></canvas>
   <div class="lane-buttons" id="lane-buttons">
-    <button class="lane-btn" id="btn-0">ド</button>
-    <button class="lane-btn" id="btn-1">レ</button>
-    <button class="lane-btn" id="btn-2">ミ</button>
-    <button class="lane-btn" id="btn-3">ファ</button>
+    <button class="lane-btn" id="btn-0">ド<span class="key-hint">F</span></button>
+    <button class="lane-btn" id="btn-1">レ<span class="key-hint">G</span></button>
+    <button class="lane-btn" id="btn-2">ミ<span class="key-hint">H</span></button>
+    <button class="lane-btn" id="btn-3">ファ<span class="key-hint">J</span></button>
   </div>
 </div>
 
@@ -552,17 +567,19 @@ const ctx2d = canvas.getContext('2d');
 
 const LANE_COLORS = ['#ff5252', '#ff9800', '#00c853', '#0091ea'];
 const LANE_COLORS_LIGHT = ['rgba(255,82,82,0.18)', 'rgba(255,152,0,0.18)', 'rgba(0,200,83,0.18)', 'rgba(0,145,234,0.18)'];
-const PERFECT_WINDOW = 0.1;
-const GOOD_WINDOW = 0.22;
+const PERFECT_WINDOW = 0.15;
+const GOOD_WINDOW = 0.35;
 const NOTE_TRAVEL_TIME = 3.5; // seconds to fall from top to judgement line
 
 function resizeCanvas() {
-  const rect = canvas.parentElement.getBoundingClientRect();
+  const gameScreen = document.getElementById('game-screen');
   const btns = document.getElementById('lane-buttons');
-  const btnH = btns.getBoundingClientRect().height;
-  const headerH = document.getElementById('app-header').getBoundingClientRect().height;
-  canvas.width = rect.width;
-  canvas.height = window.innerHeight - headerH - btnH;
+  const titleDiv = document.getElementById('game-song-title');
+  const gameRect = gameScreen.getBoundingClientRect();
+  const btnH = btns.offsetHeight;
+  const titleH = titleDiv.offsetHeight;
+  canvas.width = gameRect.width;
+  canvas.height = Math.max(100, gameRect.height - btnH - titleH);
 }
 
 function getJudgementY() {
@@ -725,7 +742,7 @@ function gameLoop(timestamp) {
   // Check for missed notes (passed judgement line by more than GOOD_WINDOW)
   for (const n of notes) {
     if (n.hit || n.missed) continue;
-    if (now - n.time > GOOD_WINDOW + 0.05) {
+    if (now - n.time > GOOD_WINDOW + 0.1) {
       n.missed = true;
       stats.miss++;
       combo = 0;
@@ -925,6 +942,9 @@ function goTitle() {
 // ─────────────────────────────
 //  Button Events
 // ─────────────────────────────
+const KEY_MAP = { 'f': 0, 'g': 1, 'h': 2, 'j': 3 };
+const keysHeld = {};
+
 function setupButtons() {
   for (let i = 0; i < 4; i++) {
     const btn = document.getElementById(`btn-${i}`);
@@ -937,6 +957,23 @@ function setupButtons() {
     btn.addEventListener('touchstart', handler, { passive: false });
     btn.addEventListener('mousedown', handler);
   }
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    const lane = KEY_MAP[e.key.toLowerCase()];
+    if (lane === undefined) return;
+    keysHeld[lane] = true;
+    const btn = document.getElementById(`btn-${lane}`);
+    btn.classList.add('pressed');
+    onLaneTap(lane);
+  });
+  document.addEventListener('keyup', (e) => {
+    const lane = KEY_MAP[e.key.toLowerCase()];
+    if (lane === undefined) return;
+    keysHeld[lane] = false;
+    document.getElementById(`btn-${lane}`).classList.remove('pressed');
+  });
 }
 
 // ─────────────────────────────
