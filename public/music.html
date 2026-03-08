@@ -333,6 +333,18 @@ body {
 
 <!-- ─ Game Screen ─ -->
 <div class="screen" id="game-screen">
+  <div id="game-song-title" style="
+    flex-shrink:0;
+    width:100%;
+    text-align:center;
+    padding:6px 8px 4px;
+    font-size:20px;
+    font-weight:900;
+    color:#1a5a3a;
+    letter-spacing:2px;
+    text-shadow:0 2px 0 rgba(255,255,255,0.7);
+    background:rgba(255,255,255,0.35);
+  "></div>
   <canvas id="game-canvas"></canvas>
   <div class="lane-buttons" id="lane-buttons">
     <button class="lane-btn" id="btn-0">ド</button>
@@ -485,6 +497,42 @@ function playMissSound() {
 }
 
 // ─────────────────────────────
+//  Metronome
+// ─────────────────────────────
+let metronomeId = null;
+
+function playBeat(isStrong) {
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = 'triangle';
+  osc.frequency.value = isStrong ? 880 : 660;
+  const now = ctx.currentTime;
+  gain.gain.setValueAtTime(isStrong ? 0.18 : 0.1, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  osc.start(now);
+  osc.stop(now + 0.08);
+}
+
+function startMetronome(bpm) {
+  stopMetronome();
+  const interval = (60 / bpm) * 1000;
+  let beat = 0;
+  playBeat(true); // 1拍目はすぐ鳴らす
+  metronomeId = setInterval(() => {
+    beat = (beat + 1) % 4;
+    playBeat(beat === 0);
+  }, interval);
+}
+
+function stopMetronome() {
+  if (metronomeId) { clearInterval(metronomeId); metronomeId = null; }
+}
+
+// ─────────────────────────────
 //  Game State
 // ─────────────────────────────
 let currentSongKey = null;
@@ -504,9 +552,9 @@ const ctx2d = canvas.getContext('2d');
 
 const LANE_COLORS = ['#ff5252', '#ff9800', '#00c853', '#0091ea'];
 const LANE_COLORS_LIGHT = ['rgba(255,82,82,0.18)', 'rgba(255,152,0,0.18)', 'rgba(0,200,83,0.18)', 'rgba(0,145,234,0.18)'];
-const PERFECT_WINDOW = 0.08;
-const GOOD_WINDOW = 0.18;
-const NOTE_TRAVEL_TIME = 1.8; // seconds to fall from top to judgement line
+const PERFECT_WINDOW = 0.1;
+const GOOD_WINDOW = 0.22;
+const NOTE_TRAVEL_TIME = 3.5; // seconds to fall from top to judgement line
 
 function resizeCanvas() {
   const rect = canvas.parentElement.getBoundingClientRect();
@@ -518,7 +566,7 @@ function resizeCanvas() {
 }
 
 function getJudgementY() {
-  return canvas.height - 48;
+  return Math.round(canvas.height * 0.55);
 }
 
 function getLaneX(lane) {
@@ -563,6 +611,11 @@ function drawGame(now) {
     }
   }
 
+  // Below-judgement zone (darker tint to show "tap here")
+  const judgeYpre = getJudgementY();
+  ctx2d.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx2d.fillRect(0, judgeYpre, W, H - judgeYpre);
+
   // Lane flash
   for (let i = 0; i < 4; i++) {
     if (laneFlash[i] > 0) {
@@ -574,14 +627,23 @@ function drawGame(now) {
 
   // Judgement line
   const judgeY = getJudgementY();
-  ctx2d.strokeStyle = 'rgba(255,255,255,0.85)';
-  ctx2d.lineWidth = 3;
-  ctx2d.setLineDash([8, 6]);
+  // Glow effect
+  ctx2d.shadowColor = 'rgba(255,255,100,0.8)';
+  ctx2d.shadowBlur = 12;
+  ctx2d.strokeStyle = 'rgba(255,255,80,0.95)';
+  ctx2d.lineWidth = 5;
   ctx2d.beginPath();
   ctx2d.moveTo(0, judgeY);
   ctx2d.lineTo(W, judgeY);
   ctx2d.stroke();
-  ctx2d.setLineDash([]);
+  ctx2d.shadowBlur = 0;
+  // White line on top
+  ctx2d.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx2d.lineWidth = 2;
+  ctx2d.beginPath();
+  ctx2d.moveTo(0, judgeY);
+  ctx2d.lineTo(W, judgeY);
+  ctx2d.stroke();
 
   // Lane circles on judgement line
   for (let i = 0; i < 4; i++) {
@@ -602,7 +664,7 @@ function drawGame(now) {
     if (y < -30 || y > H + 30) continue;
 
     const cx = getLaneX(n.lane);
-    const r = getLaneWidth() / 2 - 4;
+    const r = Math.round((getLaneWidth() / 2 - 4) / 2);
 
     // Shadow
     ctx2d.beginPath();
@@ -815,16 +877,19 @@ function startGame() {
 
   showScreen('game-screen');
   document.getElementById('score-bar').style.display = 'flex';
+  document.getElementById('game-song-title').textContent = '🎵 ' + song.title;
   updateScoreDisplay();
 
   resizeCanvas();
 
   gameStartTime = performance.now() + NOTE_TRAVEL_TIME * 1000;
+  startMetronome(song.bpm);
   animFrameId = requestAnimationFrame(gameLoop);
 }
 
 function endGame() {
   gameActive = false;
+  stopMetronome();
   if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
 
   const total = stats.perfect + stats.good + stats.miss;
@@ -850,6 +915,7 @@ function retryGame() {
 }
 
 function goTitle() {
+  stopMetronome();
   if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
   gameActive = false;
   document.getElementById('score-bar').style.display = 'none';
