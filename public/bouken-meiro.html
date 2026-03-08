@@ -209,16 +209,19 @@ body {
 /* ─ キャラ選択ボタン ─ */
 .chara-row {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   justify-content: center;
   margin-top: 4px;
+  flex-wrap: wrap;
 }
 .chara-btn {
   flex: 1;
+  min-width: 72px;
+  max-width: 100px;
   border: 3px solid transparent;
   border-radius: 20px;
   background: #f5f0ff;
-  padding: 12px 8px;
+  padding: 10px 6px;
   cursor: pointer;
   touch-action: manipulation;
   transition: transform 0.15s, border-color 0.15s;
@@ -227,9 +230,9 @@ body {
   color: #5a30a0;
 }
 .chara-btn:active { transform: scale(0.94); }
-.chara-btn .chara-icon { font-size: 48px; display: block; margin-bottom: 4px; }
-.chara-btn .chara-name { font-size: 15px; }
-.chara-btn .chara-sub  { font-size: 11px; color: #9a7aba; margin-top: 2px; }
+.chara-btn .chara-icon { font-size: 40px; display: block; margin-bottom: 4px; }
+.chara-btn .chara-name { font-size: 13px; }
+.chara-btn .chara-sub  { font-size: 10px; color: #9a7aba; margin-top: 2px; }
 
 /* ─ Confetti ─ */
 #cfCanvas {
@@ -274,6 +277,21 @@ body {
   <div class="pcard">
     <div class="ptitle">🎮 キャラを えらんでね！</div>
     <div class="chara-row">
+      <button class="chara-btn" onclick="selectChara('wa')">
+        <span class="chara-icon">👧🏻</span>
+        <span class="chara-name">わーちゃん</span>
+        <span class="chara-sub">くろかみの おんなのこ</span>
+      </button>
+      <button class="chara-btn" onclick="selectChara('tomo')">
+        <span class="chara-icon">👦</span>
+        <span class="chara-name">ともくん</span>
+        <span class="chara-sub">くろかみの おとこのこ</span>
+      </button>
+      <button class="chara-btn" onclick="selectChara('tacchun')">
+        <span class="chara-icon">👦🏽</span>
+        <span class="chara-name">たっちゅん</span>
+        <span class="chara-sub">ちゃいろいかみの ちびっこ</span>
+      </button>
       <button class="chara-btn" onclick="selectChara('omochi')">
         <span class="chara-icon">🐕</span>
         <span class="chara-name">おもち</span>
@@ -306,43 +324,48 @@ body {
 // ══════════════════════════════════════
 //  キャラクター定義
 // ══════════════════════════════════════
+
+// キャンバスにキャラを描く共通ヘルパー
+function makeDrawPlayer(emoji, glowRgb, shadowRgb, bgColor) {
+  return function(gfx, px, py, cs, t0) {
+    const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
+    gfx.fillStyle = `rgba(${glowRgb},${0.28*glow})`;
+    gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
+    gfx.fillStyle = bgColor;
+    gfx.shadowColor = `rgba(${shadowRgb},0.8)`;
+    gfx.shadowBlur = cs*0.4;
+    gfx.beginPath(); gfx.arc(px, py, cs*0.42, 0, Math.PI*2); gfx.fill();
+    gfx.shadowBlur = 0;
+    gfx.font = `${cs*0.72}px serif`;
+    gfx.fillText(emoji, px, py);
+  };
+}
+
 const CHARAS = {
   omochi: {
     emoji: '🐕',
     name: 'おもち',
-    glowColor: 'rgba(255,200,60,0.28)',
-    shadowColor: 'rgba(200,180,255,0.7)',
-    // canvas描画：白い犬らしく白背景+絵文字
-    drawPlayer(gfx, px, py, cs, t0) {
-      const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
-      gfx.fillStyle = `rgba(255,200,60,${0.28*glow})`;
-      gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
-      gfx.fillStyle = '#ffffff';
-      gfx.shadowColor = 'rgba(200,180,255,0.8)';
-      gfx.shadowBlur = cs*0.4;
-      gfx.beginPath(); gfx.arc(px, py, cs*0.42, 0, Math.PI*2); gfx.fill();
-      gfx.shadowBlur = 0;
-      gfx.font = `${cs*0.72}px serif`;
-      gfx.fillText('🐕', px, py);
-    }
+    drawPlayer: makeDrawPlayer('🐕', '255,200,60', '200,180,255', '#ffffff')
   },
   oto: {
     emoji: '👧',
     name: 'おとちゃん',
-    glowColor: 'rgba(255,160,220,0.28)',
-    shadowColor: 'rgba(255,100,180,0.7)',
-    drawPlayer(gfx, px, py, cs, t0) {
-      const glow = 0.7 + 0.3 * Math.sin((Date.now()-t0)/300);
-      gfx.fillStyle = `rgba(255,160,220,${0.28*glow})`;
-      gfx.beginPath(); gfx.arc(px, py, cs*0.52, 0, Math.PI*2); gfx.fill();
-      gfx.fillStyle = '#fff0f8';
-      gfx.shadowColor = 'rgba(255,100,180,0.8)';
-      gfx.shadowBlur = cs*0.4;
-      gfx.beginPath(); gfx.arc(px, py, cs*0.42, 0, Math.PI*2); gfx.fill();
-      gfx.shadowBlur = 0;
-      gfx.font = `${cs*0.72}px serif`;
-      gfx.fillText('👧', px, py);
-    }
+    drawPlayer: makeDrawPlayer('👧', '255,160,220', '255,100,180', '#fff0f8')
+  },
+  wa: {
+    emoji: '👧🏻',
+    name: 'わーちゃん',
+    drawPlayer: makeDrawPlayer('👧🏻', '160,210,255', '80,160,255', '#f0f8ff')
+  },
+  tomo: {
+    emoji: '👦',
+    name: 'ともくん',
+    drawPlayer: makeDrawPlayer('👦', '160,230,180', '60,160,100', '#f0fff4')
+  },
+  tacchun: {
+    emoji: '👦🏽',
+    name: 'たっちゅん',
+    drawPlayer: makeDrawPlayer('👦🏽', '255,200,130', '200,130,60', '#fffaf0')
   }
 };
 
