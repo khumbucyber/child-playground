@@ -537,6 +537,39 @@ function dirBetween(from, to) {
 function oppDir(d) { return [S,W,N,E][d]; }
 
 // ══════════════════════════════════════
+//  Drawing helpers
+// ══════════════════════════════════════
+function drawSpiderweb(gfx, cx, cy, r) {
+  const rings = 3;
+  const spokes = 8;
+  gfx.save();
+  gfx.strokeStyle = 'rgba(180,160,220,0.72)';
+  gfx.lineWidth = 0.8;
+  // 放射状の糸
+  for (let s = 0; s < spokes; s++) {
+    const angle = (s / spokes) * Math.PI * 2;
+    gfx.beginPath();
+    gfx.moveTo(cx, cy);
+    gfx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+    gfx.stroke();
+  }
+  // 同心円の糸
+  for (let ri = 1; ri <= rings; ri++) {
+    const rr = r * (ri / rings);
+    gfx.beginPath();
+    for (let s = 0; s <= spokes; s++) {
+      const angle = (s / spokes) * Math.PI * 2;
+      const x = cx + Math.cos(angle) * rr;
+      const y = cy + Math.sin(angle) * rr;
+      if (s === 0) gfx.moveTo(x, y); else gfx.lineTo(x, y);
+    }
+    gfx.closePath();
+    gfx.stroke();
+  }
+  gfx.restore();
+}
+
+// ══════════════════════════════════════
 //  Drawing
 // ══════════════════════════════════════
 let t0 = Date.now();
@@ -644,11 +677,23 @@ function draw() {
     gfx.beginPath();
     gfx.arc(cx2, cy2, cs*0.5*p2, 0, Math.PI*2);
     gfx.fill();
+
+    // ウサギ（fi===0）はクモの巣を描画
+    if (cp.fi === 0) {
+      drawSpiderweb(gfx, cx2, cy2, cs*0.46);
+    }
+
     gfx.fillStyle='#ff4466';
     gfx.font=`bold ${cs*0.22}px sans-serif`;
     gfx.fillText('！', cx2, cy2-cs*0.4);
     gfx.font=`${cs*0.58}px serif`;
     gfx.fillText(EVENTS[cp.fi].emoji, cx2, cy2+cs*0.04);
+
+    // ウサギはクモ🕷も添える
+    if (cp.fi === 0) {
+      gfx.font=`${cs*0.28}px serif`;
+      gfx.fillText('🕷', cx2+cs*0.3, cy2-cs*0.28);
+    }
   }
 
   // FOLLOWERS
