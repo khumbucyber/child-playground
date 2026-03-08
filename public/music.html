@@ -568,8 +568,10 @@ const ctx2d = canvas.getContext('2d');
 const LANE_COLORS = ['#ff5252', '#ff9800', '#00c853', '#0091ea'];
 const LANE_COLORS_LIGHT = ['rgba(255,82,82,0.18)', 'rgba(255,152,0,0.18)', 'rgba(0,200,83,0.18)', 'rgba(0,145,234,0.18)'];
 const PERFECT_WINDOW = 0.15;
-const GOOD_WINDOW = 0.35;
-const NOTE_TRAVEL_TIME = 3.5; // seconds to fall from top to judgement line
+const GOOD_WINDOW = 0.40;
+// 音符が画面上端→判定ラインまで落ちる時間
+// NOTE_TRAVEL_TIME 秒後に n.time=0 の音符が判定ラインに到達する
+const NOTE_TRAVEL_TIME = 3.5;
 
 function resizeCanvas() {
   const gameScreen = document.getElementById('game-screen');
@@ -596,12 +598,13 @@ function getLaneWidth() {
 }
 
 function getNoteY(noteTime, now) {
-  const elapsed = now - noteTime;
-  const frac = 1 - (elapsed / NOTE_TRAVEL_TIME);
-  // frac=1 at top, frac=0 at judgement line
+  // now=noteTime のとき音符は判定ラインにいる
+  // now=noteTime-NOTE_TRAVEL_TIME のとき画面最上部にいる
+  const progress = (now - noteTime + NOTE_TRAVEL_TIME) / NOTE_TRAVEL_TIME;
+  // progress: 0=画面外上 → 1=判定ライン → 1以上=判定ライン通過
   const judgeY = getJudgementY();
   const topY = 20;
-  return topY + (judgeY - topY) * (1 - Math.max(0, frac));
+  return topY + (judgeY - topY) * progress;
 }
 
 // ─────────────────────────────
@@ -681,7 +684,7 @@ function drawGame(now) {
     if (y < -30 || y > H + 30) continue;
 
     const cx = getLaneX(n.lane);
-    const r = Math.round((getLaneWidth() / 2 - 4) / 2);
+    const r = Math.round((getLaneWidth() / 2 - 4) / 4);
 
     // Shadow
     ctx2d.beginPath();
@@ -704,7 +707,7 @@ function drawGame(now) {
 
     // Lane label inside note
     ctx2d.fillStyle = 'white';
-    ctx2d.font = `bold ${Math.max(10, r * 0.85)}px 'Hiragino Maru Gothic Pro', sans-serif`;
+    ctx2d.font = `bold ${Math.max(8, r * 1.1)}px 'Hiragino Maru Gothic Pro', sans-serif`;
     ctx2d.textAlign = 'center';
     ctx2d.textBaseline = 'middle';
     ctx2d.shadowColor = 'rgba(0,0,0,0.2)';
@@ -742,7 +745,7 @@ function gameLoop(timestamp) {
   // Check for missed notes (passed judgement line by more than GOOD_WINDOW)
   for (const n of notes) {
     if (n.hit || n.missed) continue;
-    if (now - n.time > GOOD_WINDOW + 0.1) {
+    if (now - n.time > GOOD_WINDOW) {
       n.missed = true;
       stats.miss++;
       combo = 0;
