@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>やまの おくの ひみつ 📖</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;}
+
+:root{
+  --font:'Hiragino Maru Gothic Pro','BIZ UDPGothic','Kosugi Maru',sans-serif;
+  --ink:#1e1428;
+  --panel-bg:rgba(255,252,248,0.94);
+  --r:22px;
+}
+
+html,body{width:100%;height:100dvh;overflow:hidden;font-family:var(--font);}
+
+/* ── Background layer ── */
+#bg{
+  position:fixed;inset:0;z-index:0;
+  transition:background 1.4s ease;
+}
+.bg-title  {background:linear-gradient(175deg,#060e1c 0%,#0d2a18 55%,#091a0c 100%);}
+.bg-morning{background:linear-gradient(175deg,#b8d8f8 0%,#d8efc8 55%,#a8c880 100%);}
+.bg-midday {background:linear-gradient(175deg,#6ab8e8 0%,#98d870 55%,#60a030 100%);}
+.bg-afternoon{background:linear-gradient(175deg,#f0c060 0%,#e07830 55%,#804020 100%);}
+.bg-evening{background:linear-gradient(175deg,#4830a0 0%,#b85040 55%,#301808 100%);}
+
+/* ── Mountain silhouette ── */
+#mountains{
+  position:fixed;bottom:0;left:0;right:0;height:38%;z-index:1;
+  pointer-events:none;
+  transition:opacity 0.8s;
+}
+#mountains svg{width:100%;height:100%;}
+
+/* ── Trust bar ── */
+#trust-bar{
+  position:fixed;top:0;left:0;right:0;
+  display:flex;gap:10px;padding:12px 16px;
+  z-index:20;
+  opacity:0;transition:opacity 0.6s;
+}
+#trust-bar.show{opacity:1;}
+.trust-chip{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,0.75);
+  backdrop-filter:blur(4px);
+  border-radius:999px;padding:5px 12px 5px 8px;
+  font-size:13px;font-weight:700;color:#3a2a5a;
+}
+.tdots{display:flex;gap:3px;}
+.tdot{
+  width:10px;height:10px;border-radius:50%;
+  background:rgba(0,0,0,0.15);
+  transition:background 0.5s,transform 0.4s;
+}
+.tdot.on{background:#e07820;transform:scale(1.15);}
+.tdot.on.fox{background:#d03010;}
+
+/* ── Chapter label ── */
+#chapter-label{
+  position:fixed;top:52px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.95);
+  font-size:12px;font-weight:700;letter-spacing:1px;
+  padding:5px 18px;border-radius:999px;
+  z-index:20;opacity:0;transition:opacity 0.8s;
+  white-space:nowrap;
+}
+#chapter-label.show{opacity:1;}
+
+/* ── Stage (illustration area) ── */
+#stage{
+  position:fixed;top:0;left:0;right:0;
+  /* height set dynamically */
+  z-index:2;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  pointer-events:none;
+}
+
+/* Main character */
+#char-main{
+  font-size:88px;line-height:1;
+  filter:drop-shadow(0 8px 20px rgba(0,0,0,0.25));
+  transition:transform 0.4s cubic-bezier(.34,1.56,.64,1),font-size 0.4s;
+  animation:cfloat 3.5s ease-in-out infinite;
+}
+@keyframes cfloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+
+/* Far character (kitsune watching from distance) */
+#char-far{
+  position:fixed;right:24px;top:22%;
+  font-size:38px;opacity:0;
+  transition:opacity 0.6s,transform 0.6s;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  animation:cfloat 4s ease-in-out infinite;
+  z-index:3;
+}
+#char-far.show{opacity:0.85;}
+
+/* Speaker label */
+#speaker-label{
+  font-size:15px;font-weight:700;color:rgba(255,255,255,0.9);
+  text-shadow:0 1px 6px rgba(0,0,0,0.5);
+  margin-top:10px;
+  opacity:0;transition:opacity 0.4s;
+}
+#speaker-label.show{opacity:1;}
+
+/* Speech bubble */
+#speech-bubble{
+  background:rgba(255,255,255,0.92);
+  border-radius:18px;
+  padding:14px 18px;
+  margin:12px 20px 0;
+  font-size:17px;font-weight:700;color:var(--ink);
+  line-height:1.7;white-space:pre-line;
+  position:relative;
+  box-shadow:0 4px 16px rgba(0,0,0,0.15);
+  opacity:0;transition:opacity 0.4s;
+  max-width:340px;
+  text-align:center;
+}
+#speech-bubble::before{
+  content:'';position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  border:0 solid transparent;
+  border-bottom:12px solid rgba(255,255,255,0.92);
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+}
+#speech-bubble.show{opacity:1;}
+
+/* ── Bottom panel ── */
+#panel{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--panel-bg);
+  border-radius:var(--r) var(--r) 0 0;
+  box-shadow:0 -6px 40px rgba(0,0,0,0.18);
+  padding:22px 22px 28px;
+  padding-bottom:calc(28px + env(safe-area-inset-bottom));
+  z-index:10;
+  transition:transform 0.4s cubic-bezier(.4,0,.2,1),opacity 0.3s;
+  min-height:200px;
+}
+#panel.hide{transform:translateY(30px);opacity:0;}
+
+/* Narration text */
+#narr-text{
+  font-size:20px;font-weight:700;color:var(--ink);
+  line-height:1.75;white-space:pre-line;min-height:72px;
+}
+
+/* Tap hint */
+#tap-hint{
+  text-align:right;font-size:13px;color:#8a78aa;
+  font-weight:700;margin-top:10px;
+  animation:blink 1.6s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.25;}}
+
+/* ── Choices ── */
+#choices-wrap{display:none;flex-direction:column;gap:11px;margin-top:14px;}
+#choices-wrap.show{display:flex;}
+
+.ch-q{font-size:17px;font-weight:700;color:var(--ink);line-height:1.65;white-space:pre-line;margin-bottom:4px;}
+
+.choice-btn{
+  display:flex;align-items:center;gap:12px;
+  background:linear-gradient(135deg,#5030a0,#3010c0);
+  color:#fff;
+  font-family:var(--font);font-size:17px;font-weight:700;
+  border:none;border-radius:16px;
+  padding:15px 18px;
+  cursor:pointer;text-align:left;
+  box-shadow:0 4px 14px rgba(50,10,160,0.3);
+  transition:transform 0.14s,box-shadow 0.14s;
+  min-height:54px;line-height:1.4;
+}
+.choice-btn:active{transform:scale(0.95);box-shadow:0 2px 6px rgba(50,10,160,0.2);}
+.choice-btn .ce{font-size:24px;}
+
+/* ── Emotion picker ── */
+#emotion-wrap{display:none;flex-direction:column;gap:10px;}
+#emotion-wrap.show{display:flex;}
+
+.em-q{font-size:18px;font-weight:700;color:var(--ink);line-height:1.65;white-space:pre-line;margin-bottom:6px;}
+
+.em-btn{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,0.7);
+  border:2.5px solid rgba(80,40,160,0.25);
+  border-radius:15px;padding:13px 16px;
+  font-family:var(--font);font-size:16px;font-weight:700;color:var(--ink);
+  cursor:pointer;text-align:left;
+  transition:background 0.15s,border-color 0.15s,transform 0.13s;
+  min-height:52px;line-height:1.4;
+}
+.em-btn:active{transform:scale(0.96);background:rgba(80,40,160,0.12);border-color:rgba(80,40,160,0.5);}
+.em-btn .ee{font-size:26px;}
+
+/* ── Emotion response ── */
+#em-response{
+  display:none;
+  background:linear-gradient(135deg,#eee8ff,#ddd4f8);
+  border-radius:16px;padding:16px 18px;
+  font-size:18px;font-weight:700;color:var(--ink);
+  line-height:1.7;white-space:pre-line;margin-bottom:8px;
+}
+#em-response.show{display:block;}
+
+/* ── Mixed emotion ── */
+#mixed-wrap{display:none;flex-direction:column;gap:12px;}
+#mixed-wrap.show{display:flex;}
+
+.mix-q{font-size:18px;font-weight:700;color:var(--ink);line-height:1.65;white-space:pre-line;margin-bottom:2px;}
+
+.mix-btn{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,0.7);
+  border:2.5px solid rgba(80,40,160,0.25);
+  border-radius:15px;padding:13px 16px;
+  font-family:var(--font);font-size:15px;font-weight:700;color:var(--ink);
+  cursor:pointer;
+  transition:background 0.15s,transform 0.13s;
+  min-height:54px;
+}
+.mix-btn:active{transform:scale(0.96);background:rgba(80,40,160,0.1);}
+.mix-emotions{display:flex;align-items:center;gap:4px;font-size:26px;flex-shrink:0;}
+.mix-plus{font-size:16px;opacity:0.5;}
+
+/* ── Title screen ── */
+#title-screen{
+  position:fixed;inset:0;z-index:100;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;text-align:center;padding:40px 24px;
+  background:transparent;
+}
+.t-emoji{font-size:96px;margin-bottom:20px;animation:cfloat 3s ease-in-out infinite;}
+.t-main{font-size:30px;font-weight:700;letter-spacing:2px;line-height:1.45;
+  text-shadow:0 3px 16px rgba(0,0,0,0.6);margin-bottom:8px;}
+.t-sub{font-size:14px;opacity:0.75;letter-spacing:1px;margin-bottom:40px;}
+.t-stars{font-size:20px;opacity:0.5;margin-bottom:40px;letter-spacing:6px;}
+.start-btn{
+  background:linear-gradient(135deg,#38c870,#18a848);
+  color:#fff;font-family:var(--font);font-size:22px;font-weight:700;
+  border:none;border-radius:20px;padding:20px 52px;
+  cursor:pointer;letter-spacing:2px;
+  box-shadow:0 8px 32px rgba(20,160,80,0.45);
+  transition:transform 0.14s;
+}
+.start-btn:active{transform:scale(0.93);}
+
+/* ── Ending screen ── */
+#ending-screen{
+  position:fixed;inset:0;z-index:100;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;text-align:center;padding:40px 28px;
+  background:linear-gradient(175deg,#2a1060 0%,#6a2840 55%,#1a0820 100%);
+}
+#ending-screen.show{display:flex;}
+.end-emoji{font-size:80px;margin-bottom:20px;}
+.end-title{
+  font-size:28px;font-weight:700;letter-spacing:1px;
+  text-shadow:0 2px 12px rgba(0,0,0,0.5);margin-bottom:18px;
+}
+.end-body{
+  font-size:18px;line-height:1.85;opacity:0.92;white-space:pre-line;margin-bottom:12px;
+}
+.end-trust{font-size:15px;opacity:0.6;margin-bottom:36px;}
+.replay-btn{
+  background:rgba(255,255,255,0.2);color:#fff;
+  font-family:var(--font);font-size:18px;font-weight:700;
+  border:2.5px solid rgba(255,255,255,0.45);border-radius:16px;
+  padding:16px 40px;cursor:pointer;
+  transition:transform 0.14s,background 0.2s;
+}
+.replay-btn:active{transform:scale(0.95);background:rgba(255,255,255,0.32);}
+
+/* Transition flash */
+#flash{
+  position:fixed;inset:0;z-index:50;
+  background:#fff;opacity:0;pointer-events:none;
+  transition:opacity 0.25s;
+}
+#flash.on{opacity:1;}
+</style>
+</head>
+<body>
+
+<div id="bg" class="bg-title"></div>
+
+<!-- Mountain silhouette -->
+<div id="mountains">
+  <svg viewBox="0 0 400 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="mg1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(30,60,20,0.5)"/>
+        <stop offset="100%" stop-color="rgba(20,40,10,0.7)"/>
+      </linearGradient>
+      <linearGradient id="mg2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(20,45,15,0.7)"/>
+        <stop offset="100%" stop-color="rgba(10,25,5,0.9)"/>
+      </linearGradient>
+    </defs>
+    <!-- Back mountains -->
+    <polygon points="0,120 80,30 140,70 220,15 310,60 400,25 400,120" fill="url(#mg1)"/>
+    <!-- Front mountains -->
+    <polygon points="0,120 60,55 120,90 200,40 270,80 340,50 400,75 400,120" fill="url(#mg2)"/>
+    <!-- Trees -->
+    <g fill="rgba(10,40,5,0.8)" font-size="18">
+      <text x="18" y="115">🌲</text>
+      <text x="55" y="118">🌲</text>
+      <text x="290" y="115">🌲</text>
+      <text x="335" y="118">🌲</text>
+      <text x="370" y="116">🌲</text>
+    </g>
+  </svg>
+</div>
+
+<!-- Trust bar -->
+<div id="trust-bar">
+  <div class="trust-chip">
+    👴 <div class="tdots" id="dots-o">
+      <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+    </div>
+  </div>
+  <div class="trust-chip">
+    🦊 <div class="tdots" id="dots-k">
+      <div class="tdot fox"></div><div class="tdot fox"></div><div class="tdot fox"></div>
+    </div>
+  </div>
+</div>
+
+<div id="chapter-label"></div>
+
+<!-- Stage -->
+<div id="stage">
+  <div id="char-main">📖</div>
+  <div id="speaker-label"></div>
+  <div id="speech-bubble"></div>
+</div>
+
+<!-- Far character (kitsune) -->
+<div id="char-far">🦊</div>
+
+<!-- Bottom panel -->
+<div id="panel">
+  <!-- Narration -->
+  <div id="narr-text"></div>
+  <div id="tap-hint">タップして つぎへ ▶</div>
+
+  <!-- Choices -->
+  <div id="choices-wrap">
+    <div class="ch-q" id="ch-q"></div>
+    <div id="ch-btns"></div>
+  </div>
+
+  <!-- Emotion pick -->
+  <div id="emotion-wrap">
+    <div class="em-q" id="em-q"></div>
+    <div id="em-btns"></div>
+    <div id="em-response"></div>
+  </div>
+
+  <!-- Mixed emotion pick -->
+  <div id="mixed-wrap">
+    <div class="mix-q" id="mix-q"></div>
+    <div id="mix-btns"></div>
+    <div id="em-response-mix"></div>
+  </div>
+</div>
+
+<!-- Title screen -->
+<div id="title-screen">
+  <div class="t-emoji">🏔️</div>
+  <div class="t-main">やまの おくの<br>ひみつ</div>
+  <div class="t-sub">〜しんらいの ものがたり〜</div>
+  <div class="t-stars">✦ ✦ ✦</div>
+  <button class="start-btn" onclick="startGame()">はじめる</button>
+</div>
+
+<!-- Ending screen -->
+<div id="ending-screen">
+  <div class="end-emoji" id="end-emoji"></div>
+  <div class="end-title" id="end-title"></div>
+  <div class="end-body" id="end-body"></div>
+  <div class="end-trust" id="end-trust"></div>
+  <button class="replay-btn" onclick="restartGame()">もういちど よむ</button>
+</div>
+
+<!-- Flash transition -->
+<div id="flash"></div>
+
+<script>
+// ─────────────────────────────
+//  State
+// ─────────────────────────────
+const S = {
+  scene: '',
+  trust_o: 0,   // ojisan: -1 to 2
+  trust_k: 0,   // kitsune: -1 to 3
+  pendingNext: null,
+  inEmotion: false,
+  inChoice: false,
+};
+
+// ─────────────────────────────
+//  Scene data
+// ─────────────────────────────
+const SCENES = {
+
+  // ── Chapter 1 ──────────────────────────────────────
+  c1_1: {
+    bg:'morning', char:'🌄', chapter:'だい１しょう　はじめてのやま',
+    text:'なつのはじめ。\nきみは おかあさんと いっしょに\nやまのむらへ やってきた。',
+    next:'c1_2'
+  },
+  c1_2: {
+    bg:'morning', char:'🏔️',
+    text:'たかい やまに、しんと した もり。\nまちとは ちがう、しずかな くうきが\nきみを つつんだ。',
+    next:'c1_3'
+  },
+  c1_3: {
+    bg:'morning', char:'🏡',
+    text:'このむらには、むかしから やまで くらす\nおじいさんが いた。\nやまのことなら なんでも しっているという。',
+    next:'c1_ojisan_1'
+  },
+  c1_ojisan_1: {
+    bg:'morning', char:'👴',
+    text:'おじいさんは きみを みると、\nちいさく うなずいた。',
+    next:'c1_ojisan_2'
+  },
+  c1_ojisan_2: {
+    bg:'morning', char:'👴',
+    text:'それだけで、また\nじぶんの しごとに もどってしまった。',
+    next:'c1_em_ojisan'
+  },
+
+  c1_em_ojisan: {
+    type:'emotion', bg:'morning', char:'👴',
+    question:'おじいさんは なぜ\nあまり はなさなかったのかな？',
+    options:[
+      { emoji:'😤', text:'きみのことが きらいだから',
+        response:'うーん、そうかな？\nおじいさんは ちゃんと うなずいてくれたよ。\nきらいな ひとには しないかも…。',
+        next:'c1_kitsune_1' },
+      { emoji:'🤔', text:'まだ しらない ひとだから',
+        response:'そうかもしれないね。\nしらない ひとに いきなり こころを ひらくのは\nおとなでも むずかしいよ。',
+        next:'c1_kitsune_1' },
+      { emoji:'🗣️', text:'はなすのが にがてだから',
+        response:'そうだね。\nことばが すくなくても、きもちが ないわけじゃない。\nにがてな ことは ひとぞれぞれだよ。',
+        next:'c1_kitsune_1' },
+    ]
+  },
+
+  c1_kitsune_1: {
+    bg:'morning', char:'🌲', charFar:true,
+    text:'そのとき、きのあいだから\nなにかの めが じっと こちらを みていた。',
+    next:'c1_kitsune_2'
+  },
+  c1_kitsune_2: {
+    bg:'morning', char:'🦊', charFar:true,
+    text:'キツネだ！\nこちらを じっと みたまま、うごかない。',
+    next:'c1_kitsune_choice'
+  },
+
+  c1_kitsune_choice: {
+    type:'choice', bg:'morning', char:'🦊', charFar:true,
+    question:'キツネは きのかげで\nじっと みている。\nきみは どうする？',
+    choices:[
+      { emoji:'🏃', text:'おいかける！',        next:'c1_chase', dk:-1 },
+      { emoji:'🤫', text:'じっと みている',     next:'c1_watch', dk:1  },
+    ]
+  },
+
+  c1_chase: {
+    bg:'morning', char:'💨',
+    text:'キツネは おどろいて\nやぶのおくへ にげてしまった。\nしばらく でてこなかった。',
+    next:'c2_start'
+  },
+
+  c1_watch: {
+    bg:'morning', char:'🦊', charFar:true,
+    text:'キツネは すこしだけ\nこちらに くびをかしげた。\nそして、そっと きのおくへ きえた。',
+    next:'c1_em_kitsune'
+  },
+
+  c1_em_kitsune: {
+    type:'emotion', bg:'morning', char:'🦊',
+    question:'このとき、キツネは\nどんなきもちだったと おもう？',
+    options:[
+      { emoji:'😨', text:'こわかった',
+        response:'そうかもね。\nにんげんに いやなことを された けいけんが\nあるのかもしれない。',
+        next:'c2_start' },
+      { emoji:'🤔', text:'ふしぎに おもった',
+        response:'そうかも！\nにんげんが おいかけてこないなんて\nめずらしかったのかもね。',
+        next:'c2_start' },
+      { emoji:'🌱', text:'すこし うれしかった',
+        response:'そうだといいね。\nじっと みていてくれたことが\nこころに のこったのかもしれない。',
+        next:'c2_start' },
+    ]
+  },
+
+  // ── Chapter 2 ──────────────────────────────────────
+  c2_start: {
+    bg:'midday', char:'🌞', chapter:'だい２しょう　やまをしること',
+    text:'つぎのひの あさ、\nおじいさんが きみに いった。',
+    next:'c2_rule'
+  },
+  c2_rule: {
+    bg:'midday', char:'👴',
+    speech:'「かわの むこうは あぶない。\nぜったいに いってはいかん。」',
+    speaker:'おじいさん',
+    text:'おじいさんは それだけ いって、\nまた やまへ でかけた。',
+    next:'c2_explore'
+  },
+  c2_explore: {
+    bg:'midday', char:'🌿',
+    text:'きみは むらのまわりを\nたんけんした。\nやまの きが たかく、かぜが きもちよかった。',
+    next:'c2_river_1'
+  },
+  c2_river_1: {
+    bg:'midday', char:'🏞️',
+    text:'しばらく あるくと、かわに でた。\nむこうぎしに きれいな はなが さいていた。',
+    next:'c2_river_2'
+  },
+  c2_river_2: {
+    bg:'midday', char:'🏞️',
+    text:'そこは、おじいさんが\n「いってはいかん」といった ばしょだ。',
+    next:'c2_river_choice'
+  },
+
+  c2_river_choice: {
+    type:'choice', bg:'midday', char:'🏞️',
+    question:'むこうに きれいな はなが みえる。\nおじいさんは「いくな」といっていた。\nどうする？',
+    choices:[
+      { emoji:'🌸', text:'わたって はなを みに いく', next:'c2_cross_1', do:-1 },
+      { emoji:'↩️',  text:'やめて もどる',             next:'c2_back_1',  do:1  },
+    ]
+  },
+
+  c2_cross_1: {
+    bg:'midday', char:'😰',
+    text:'かわを わたったとき、\nあしをすべらせて ころんでしまった。\nおじいさんが たすけに きた。',
+    next:'c2_cross_2'
+  },
+  c2_cross_2: {
+    bg:'midday', char:'👴',
+    text:'おじいさんは なにも いわなかった。\nただ、しずかに てを かしてくれた。\nきみは はずかしかった。',
+    next:'c2_kitsune2_setup'
+  },
+
+  c2_back_1: {
+    bg:'midday', char:'👴',
+    text:'むらに もどると、\nおじいさんが ちらっと こちらを みた。',
+    next:'c2_back_2'
+  },
+  c2_back_2: {
+    bg:'midday', char:'👴',
+    text:'きのうより、すこしだけ\nながく めを あわせてくれた きがした。',
+    next:'c2_kitsune2_setup'
+  },
+
+  c2_kitsune2_setup: {
+    bg:'midday', char:'🌙',
+    text:'そのよる、まどから そとを みると\nキツネが にわに きていた。\nきのうより、ずっと ちかい。',
+    next:'c2_kitsune2_choice'
+  },
+
+  c2_kitsune2_choice: {
+    type:'choice', bg:'midday', char:'🦊',
+    question:'キツネが にわに きている。\nきみは どうする？',
+    choices:[
+      { emoji:'🍎', text:'すぐに たべものを もっていく', next:'c2_k_food',  dk:0  },
+      { emoji:'🪑', text:'しずかに そばに すわる',       next:'c2_k_sit_1', dk:1  },
+      { emoji:'📣', text:'なまえを よんでみる',           next:'c2_k_call',  dk:-1 },
+    ]
+  },
+
+  c2_k_food: {
+    bg:'midday', char:'🦊',
+    text:'たべものを もって はしると、\nキツネは びっくりして にげてしまった。\n「あわてすぎた かな」と おもった。',
+    next:'c3_start'
+  },
+  c2_k_sit_1: {
+    bg:'midday', char:'🦊',
+    text:'しずかに すわっていると、\nキツネは しばらく じっと みていた。',
+    next:'c2_k_sit_2'
+  },
+  c2_k_sit_2: {
+    bg:'midday', char:'🦊',
+    text:'そして、ほんの すこしだけ\nちかづいてきた。\nめが あった。',
+    next:'c3_start'
+  },
+  c2_k_call: {
+    bg:'midday', char:'💨',
+    text:'こえを だすと、\nキツネは すぐに にげてしまった。\nしずかな やまに、こえが ひびいた。',
+    next:'c3_start'
+  },
+
+  // ── Chapter 3 ──────────────────────────────────────
+  c3_start: {
+    bg:'afternoon', char:'🌤️', chapter:'だい３しょう　やまのこえをきく',
+    text:'すうにちが たった。\nある あさ、やまが すこし\nちがう きがした。',
+    next:'c3_notice_1'
+  },
+  c3_notice_1: {
+    bg:'afternoon', char:'🐦',
+    text:'とりの こえが すくない。\nいつもより、ずっと しずかだ。',
+    next:'c3_notice_2'
+  },
+  c3_notice_2: {
+    bg:'afternoon', char:'💧',
+    text:'かわの みずが、きのうより にごっている。\nなにかが、おかしい。',
+    next:'c3_ojisan_face'
+  },
+  c3_ojisan_face: {
+    bg:'afternoon', char:'👴',
+    text:'おじいさんも きがついていた。\nおじいさんの かおを みると、\nなんとも いえない ひょうじょうだった。',
+    next:'c3_em_mixed'
+  },
+
+  c3_em_mixed: {
+    type:'mixed', bg:'afternoon', char:'👴',
+    question:'おじいさんの こころには\nふたつの きもちが まざっていた。\nどんなきもちが まざっていると おもう？',
+    options:[
+      { e1:'😟', l1:'しんぱい', e2:'😢', l2:'かなしい',
+        response:'そうかもしれないね。\nずっと まもってきた やまが へんになって、\nしんぱいで かなしいのかも。', next:'c3_choice' },
+      { e1:'😤', l1:'おこっている', e2:'😔', l2:'がっかり',
+        response:'うん。まもりたい ものが きずついたら\nおこりたく なるよね。\nがっかりも してるのかも。', next:'c3_choice' },
+      { e1:'💪', l1:'やる気がある', e2:'😰', l2:'こわい',
+        response:'なんとかしたい きもちと、\nどうなるか わからない こわさが\nまざっているのかもね。', next:'c3_choice' },
+    ]
+  },
+
+  c3_choice: {
+    type:'choice', bg:'afternoon', char:'👴',
+    question:'きみは どうしたい？',
+    choices:[
+      { emoji:'🗣️', text:'おじいさんに はなしかける', next:'c3_tell_1', do:1  },
+      { emoji:'🔍', text:'ひとりで しらべてみる',    next:'c3_alone_1', do:0 },
+    ]
+  },
+
+  c3_tell_1: {
+    bg:'afternoon', char:'👴',
+    text:'「おじいさん、やまが おかしいきがする。\nいっしょに みに いかない？」\nおじいさんは きみの かおを じっと みた。',
+    next:'c3_tell_2'
+  },
+  c3_tell_2: {
+    bg:'afternoon', char:'👴',
+    speech:'「……そうだな。いっしょに いくか。」',
+    speaker:'おじいさん',
+    text:'はじめて、おじいさんが きみに\nさきに あるきはじめた。\nすぐ よこに。',
+    next:'c3_together'
+  },
+
+  c3_alone_1: {
+    bg:'afternoon', char:'🌲',
+    text:'かわのほとりを ひとりで しらべた。\nだが、わからない ことが おおすぎた。',
+    next:'c3_alone_2'
+  },
+  c3_alone_2: {
+    bg:'afternoon', char:'👴',
+    text:'「おじいさん、やっぱり たすけて。\nやまが おかしい きがする」\nおじいさんは うなずいて、いっしょに きてくれた。',
+    next:'c3_together'
+  },
+
+  c3_together: {
+    bg:'afternoon', char:'🏔️',
+    text:'かわのうえのほうで、\nおおきな きが たおれて みずを ふさいでいた。\nそれで みずが にごっていたのだ。',
+    next:'c3_kitsune3'
+  },
+  c3_kitsune3: {
+    bg:'afternoon', char:'🦊',
+    text:'すると、やぶのなかから\nキツネが でてきた。',
+    next:'c3_kitsune3b'
+  },
+  c3_kitsune3b: {
+    bg:'afternoon', char:'🦊',
+    text:'おじいさんの そばに すわって、\nやまのほうを じっと みている。\nキツネも、しんぱいだったのかもしれない。',
+    next:'c4_work'
+  },
+
+  // ── Chapter 4 ──────────────────────────────────────
+  c4_work: {
+    bg:'evening', char:'👴', chapter:'だい４しょう　いっしょに',
+    text:'おじいさんと きみは、\nちからを あわせて きを どかした。\nキツネも そばで みていた。',
+    next:'c4_water'
+  },
+  c4_water: {
+    bg:'evening', char:'💧',
+    text:'すこしずつ、みずが きれいに ながれはじめた。\nとりの こえが もどってきた。\nやまが、いきかえる きがした。',
+    next:'c4_talk'
+  },
+  c4_talk: {
+    bg:'evening', char:'👴',
+    speech:'「このやまは みんなの やまだ。\nひとりじゃ できない ことも、\nいっしょなら できる。」',
+    speaker:'おじいさん',
+    text:'おじいさんが、きみに\nはじめて ながく はなしてくれた。',
+    next:'c4_end_calc'
+  },
+
+  // c4_end_calc は JS で分岐処理
+};
+
+// ─────────────────────────────
+//  Ending definitions
+// ─────────────────────────────
+const ENDINGS = {
+  great: {
+    emoji:'🌟',
+    title:'やまの こころ',
+    body:'おじいさんは きみのことを\nやまの なかまとして みとめてくれた。\n\nキツネも、もう にげなくなった。\n\nしんらいは、じかんをかけて\nそっと つむものだと きみは しった。',
+  },
+  good_o: {
+    emoji:'🌿',
+    title:'はじまりの ともだち',
+    body:'おじいさんとは、すこし こころが\nちかくなれた きがした。\n\nキツネとは まだ とおい。\nでも、また くれば\nきっと おぼえていてくれるよ。',
+  },
+  good_k: {
+    emoji:'🦊',
+    title:'はじまりの ともだち',
+    body:'キツネとは こころが\nすこし つながった きがした。\n\nおじいさんとは、もうすこし\nじかんが かかりそう。\nでも、あきらめなくていいよ。',
+  },
+  restart: {
+    emoji:'🌱',
+    title:'また いつか',
+    body:'しんらいを つくるのは\nかんたんじゃなかった。\n\nでも、これは ざんねんじゃない。\nじかんを かけて、もういちど\nやってみよう。',
+  },
+};
+
+// ─────────────────────────────
+//  DOM refs
+// ─────────────────────────────
+const $ = id => document.getElementById(id);
+const bgEl        = $('bg');
+const charMain    = $('char-main');
+const charFar     = $('char-far');
+const speakerLbl  = $('speaker-label');
+const speechBub   = $('speech-bubble');
+const panel       = $('panel');
+const narrText    = $('narr-text');
+const tapHint     = $('tap-hint');
+const choicesWrap = $('choices-wrap');
+const chQ         = $('ch-q');
+const chBtns      = $('ch-btns');
+const emotionWrap = $('emotion-wrap');
+const emQ         = $('em-q');
+const emBtns      = $('em-btns');
+const emResp      = $('em-response');
+const mixedWrap   = $('mixed-wrap');
+const mixQ        = $('mix-q');
+const mixBtns     = $('mix-btns');
+const emRespMix   = $('em-response-mix');
+const trustBar    = $('trust-bar');
+const chapterLbl  = $('chapter-label');
+const endScreen   = $('ending-screen');
+const flashEl     = $('flash');
+const stageEl     = $('stage');
+const dotsO       = $('dots-o').querySelectorAll('.tdot');
+const dotsK       = $('dots-k').querySelectorAll('.tdot');
+
+// ─────────────────────────────
+//  Layout: adjust stage height
+// ─────────────────────────────
+function adjustLayout() {
+  const panelH = panel.offsetHeight;
+  const total = window.innerHeight;
+  stageEl.style.height = (total - panelH) + 'px';
+}
+window.addEventListener('resize', adjustLayout);
+
+// ─────────────────────────────
+//  Trust display
+// ─────────────────────────────
+function updateTrust() {
+  // ojisan dots: show filled for levels 1, 2 (neutral=0, bad=-1)
+  dotsO.forEach((d, i) => {
+    d.classList.toggle('on', (S.trust_o >= i + 1));
+  });
+  dotsK.forEach((d, i) => {
+    d.classList.toggle('on', (S.trust_k >= i + 1));
+  });
+}
+
+// ─────────────────────────────
+//  Helpers: show/hide panels
+// ─────────────────────────────
+function hideAllPanelSections() {
+  narrText.style.display = '';
+  tapHint.style.display  = '';
+  choicesWrap.classList.remove('show');
+  emotionWrap.classList.remove('show');
+  mixedWrap.classList.remove('show');
+  emResp.classList.remove('show');
+  emRespMix.classList.remove('show');
+  speechBub.classList.remove('show');
+  speakerLbl.classList.remove('show');
+  charFar.classList.remove('show');
+  narrText.textContent = '';
+  tapHint.style.display = 'none';
+}
+
+// ─────────────────────────────
+//  Scene renderer
+// ─────────────────────────────
+function showScene(id) {
+  // handle computed ending
+  if (id === 'c4_end_calc') {
+    const key = calcEnding();
+    showEnding(key);
+    return;
+  }
+
+  const sc = SCENES[id];
+  if (!sc) { console.warn('Scene not found:', id); return; }
+
+  S.scene      = id;
+  S.inEmotion  = false;
+  S.inChoice   = false;
+  S.pendingNext = sc.next || null;
+
+  // Background
+  bgEl.className = 'bg-' + (sc.bg || 'morning');
+
+  // Chapter label
+  if (sc.chapter) {
+    chapterLbl.textContent = sc.chapter;
+    chapterLbl.classList.add('show');
+    setTimeout(() => chapterLbl.classList.remove('show'), 3500);
+  }
+
+  // Trust bar (show after chapter 1 starts)
+  trustBar.classList.add('show');
+  updateTrust();
+
+  hideAllPanelSections();
+
+  // Far character
+  if (sc.charFar) {
+    charFar.classList.add('show');
+  }
+
+  // Main char
+  charMain.textContent = sc.char || '';
+
+  // Scene type dispatch
+  const type = sc.type || 'narration';
+
+  if (type === 'narration') {
+    renderNarration(sc);
+  } else if (type === 'choice') {
+    renderChoice(sc);
+  } else if (type === 'emotion') {
+    renderEmotion(sc);
+  } else if (type === 'mixed') {
+    renderMixed(sc);
+  }
+
+  adjustLayout();
+}
+
+// ── Narration ──────────────────
+function renderNarration(sc) {
+  // Speech bubble
+  if (sc.speech) {
+    speechBub.textContent = sc.speech;
+    speechBub.classList.add('show');
+    if (sc.speaker) {
+      speakerLbl.textContent = sc.speaker;
+      speakerLbl.classList.add('show');
+    }
+  }
+
+  narrText.style.display = '';
+  narrText.textContent   = sc.text || '';
+  tapHint.style.display  = '';
+
+  // Tap to advance (on panel)
+  S.inEmotion = false;
+  S.inChoice  = false;
+}
+
+// ── Choice ─────────────────────
+function renderChoice(sc) {
+  narrText.style.display = 'none';
+  tapHint.style.display  = 'none';
+
+  chQ.textContent = sc.question || '';
+  chBtns.innerHTML = '';
+
+  sc.choices.forEach((ch, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span class="ce">${ch.emoji || ''}</span>${ch.text}`;
+    btn.onclick = () => {
+      // Apply trust deltas
+      if (ch.do !== undefined) S.trust_o += ch.do;
+      if (ch.dk !== undefined) S.trust_k += ch.dk;
+      S.trust_o = Math.max(-1, Math.min(3, S.trust_o));
+      S.trust_k = Math.max(-2, Math.min(3, S.trust_k));
+      updateTrust();
+      transition(() => showScene(ch.next));
+    };
+    chBtns.appendChild(btn);
+  });
+
+  choicesWrap.classList.add('show');
+  S.inChoice = true;
+
+  adjustLayout();
+}
+
+// ── Emotion ────────────────────
+function renderEmotion(sc) {
+  narrText.style.display = 'none';
+  tapHint.style.display  = 'none';
+
+  emQ.textContent = sc.question || '';
+  emBtns.innerHTML = '';
+  emResp.classList.remove('show');
+
+  sc.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'em-btn';
+    btn.innerHTML = `<span class="ee">${opt.emoji}</span>${opt.text}`;
+    btn.onclick = () => {
+      emBtns.querySelectorAll('.em-btn').forEach(b => b.style.opacity = '0.4');
+      btn.style.opacity = '1';
+      btn.style.borderColor = 'rgba(80,40,160,0.7)';
+
+      emResp.textContent = opt.response || '';
+      emResp.classList.add('show');
+
+      // Next: tap on response to advance
+      S.pendingNext = opt.next;
+      S.inEmotion   = true;
+
+      // Disable buttons
+      emBtns.querySelectorAll('.em-btn').forEach(b => b.onclick = null);
+
+      adjustLayout();
+    };
+    emBtns.appendChild(btn);
+  });
+
+  emotionWrap.classList.add('show');
+  S.inEmotion = false;
+  S.inChoice  = true; // block panel tap
+
+  adjustLayout();
+}
+
+// ── Mixed emotion ──────────────
+function renderMixed(sc) {
+  narrText.style.display = 'none';
+  tapHint.style.display  = 'none';
+
+  mixQ.textContent = sc.question || '';
+  mixBtns.innerHTML = '';
+  emRespMix.classList.remove('show');
+
+  sc.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'mix-btn';
+    btn.innerHTML = `
+      <div class="mix-emotions">
+        ${opt.e1}<span class="mix-plus">＋</span>${opt.e2}
+      </div>
+      <div>
+        <span style="font-size:14px;opacity:0.7;">${opt.l1} と ${opt.l2}</span>
+      </div>`;
+    btn.onclick = () => {
+      mixBtns.querySelectorAll('.mix-btn').forEach(b => b.style.opacity = '0.4');
+      btn.style.opacity = '1';
+      btn.style.borderColor = 'rgba(80,40,160,0.6)';
+
+      emRespMix.textContent = opt.response || '';
+      emRespMix.classList.add('show');
+      emRespMix.id = 'em-response-mix'; // keep ID
+
+      S.pendingNext = opt.next;
+      S.inEmotion   = true;
+      mixBtns.querySelectorAll('.mix-btn').forEach(b => b.onclick = null);
+      adjustLayout();
+    };
+    mixBtns.appendChild(btn);
+  });
+
+  mixedWrap.classList.add('show');
+  S.inEmotion = false;
+  S.inChoice  = true;
+  adjustLayout();
+}
+
+// ─────────────────────────────
+//  Panel tap handler
+// ─────────────────────────────
+panel.addEventListener('click', () => {
+  if (S.inChoice && !S.inEmotion) return; // waiting for choice button tap
+  if (S.inEmotion) {
+    // response is showing → advance
+    transition(() => showScene(S.pendingNext));
+    return;
+  }
+  // Narration → advance
+  if (S.pendingNext) {
+    transition(() => showScene(S.pendingNext));
+  }
+});
+
+// ─────────────────────────────
+//  Transition flash
+// ─────────────────────────────
+function transition(fn) {
+  flashEl.classList.add('on');
+  setTimeout(() => {
+    fn();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        flashEl.classList.remove('on');
+        adjustLayout();
+      });
+    });
+  }, 250);
+}
+
+// ─────────────────────────────
+//  Ending
+// ─────────────────────────────
+function calcEnding() {
+  const o = S.trust_o;
+  const k = S.trust_k;
+  if (o >= 1 && k >= 1) return 'great';
+  if (o >= 1)           return 'good_o';
+  if (k >= 1)           return 'good_k';
+  return 'restart';
+}
+
+function showEnding(key) {
+  const e = ENDINGS[key];
+  $('end-emoji').textContent  = e.emoji;
+  $('end-title').textContent  = e.title;
+  $('end-body').textContent   = e.body;
+
+  // Trust recap
+  const oStars = '❤️'.repeat(Math.max(0, S.trust_o + 1));
+  const kStars = '🧡'.repeat(Math.max(0, S.trust_k + 1));
+  $('end-trust').textContent =
+    `おじいさん ${oStars || '…'}　キツネ ${kStars || '…'}`;
+
+  endScreen.classList.add('show');
+}
+
+// ─────────────────────────────
+//  Start / Restart
+// ─────────────────────────────
+function startGame() {
+  $('title-screen').style.display = 'none';
+  S.trust_o = 0;
+  S.trust_k = 0;
+  updateTrust();
+  adjustLayout();
+  showScene('c1_1');
+}
+
+function restartGame() {
+  endScreen.classList.remove('show');
+  S.trust_o = 0;
+  S.trust_k = 0;
+  updateTrust();
+  showScene('c1_1');
+}
+
+// Init
+adjustLayout();
+</script>
+</body>
+</html>
