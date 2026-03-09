@@ -278,6 +278,80 @@ html,body{width:100%;height:100dvh;overflow:hidden;font-family:var(--font);}
 }
 .replay-btn:active{transform:scale(0.95);background:rgba(255,255,255,0.32);}
 
+/* ── Home button (trust bar 右端) ── */
+#home-btn{
+  margin-left:auto;
+  background:rgba(255,255,255,0.75);
+  backdrop-filter:blur(4px);
+  border:none;border-radius:999px;
+  width:36px;height:36px;
+  font-size:17px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform 0.14s,background 0.2s;
+  flex-shrink:0;
+}
+#home-btn:active{transform:scale(0.88);background:rgba(255,255,255,0.95);}
+
+/* ── 確認モーダル ── */
+#confirm-modal{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.55);
+  display:none;align-items:center;justify-content:center;
+  padding:32px;
+}
+#confirm-modal.show{display:flex;}
+.confirm-box{
+  background:#fff;border-radius:24px;
+  padding:30px 22px 24px;text-align:center;
+  width:100%;max-width:320px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.3);
+}
+.confirm-q{
+  font-size:19px;font-weight:700;color:var(--ink);
+  line-height:1.65;margin-bottom:22px;
+}
+.confirm-btns{display:flex;flex-direction:column;gap:11px;}
+.confirm-yes{
+  background:linear-gradient(135deg,#e05028,#c02808);
+  color:#fff;font-family:var(--font);font-size:17px;font-weight:700;
+  border:none;border-radius:14px;padding:14px;cursor:pointer;
+  transition:transform 0.13s;
+}
+.confirm-yes:active{transform:scale(0.96);}
+.confirm-no{
+  background:rgba(80,40,160,0.08);color:var(--ink);
+  font-family:var(--font);font-size:17px;font-weight:700;
+  border:2px solid rgba(80,40,160,0.2);border-radius:14px;
+  padding:14px;cursor:pointer;transition:transform 0.13s;
+}
+.confirm-no:active{transform:scale(0.96);}
+
+/* タイトル画面のメニューリンク */
+.t-menu-link{
+  display:inline-block;
+  color:rgba(255,255,255,0.6);
+  font-size:15px;font-weight:700;
+  text-decoration:none;
+  border-bottom:1px solid rgba(255,255,255,0.3);
+  padding-bottom:2px;
+  margin-top:22px;
+  transition:color 0.2s;
+}
+.t-menu-link:active{color:#fff;}
+
+/* エンディング画面のメニューボタン */
+.menu-btn{
+  display:inline-block;
+  background:rgba(255,255,255,0.12);color:#fff;
+  font-family:var(--font);font-size:17px;font-weight:700;
+  border:2px solid rgba(255,255,255,0.32);border-radius:16px;
+  padding:14px 36px;cursor:pointer;
+  text-decoration:none;
+  transition:transform 0.14s,background 0.2s;
+  margin-bottom:12px;
+}
+.menu-btn:active{transform:scale(0.95);background:rgba(255,255,255,0.26);}
+
 /* Transition flash */
 #flash{
   position:fixed;inset:0;z-index:50;
@@ -331,6 +405,7 @@ html,body{width:100%;height:100dvh;overflow:hidden;font-family:var(--font);}
       <div class="tdot fox"></div><div class="tdot fox"></div><div class="tdot fox"></div>
     </div>
   </div>
+  <button id="home-btn" onclick="goHome()" aria-label="メニューへ">🏠</button>
 </div>
 
 <div id="chapter-label"></div>
@@ -379,6 +454,7 @@ html,body{width:100%;height:100dvh;overflow:hidden;font-family:var(--font);}
   <div class="t-sub">〜しんらいの ものがたり〜</div>
   <div class="t-stars">✦ ✦ ✦</div>
   <button class="start-btn" onclick="startGame()">はじめる</button>
+  <a href="./index.html" class="t-menu-link">← こどもランドへ もどる</a>
 </div>
 
 <!-- Ending screen -->
@@ -388,6 +464,18 @@ html,body{width:100%;height:100dvh;overflow:hidden;font-family:var(--font);}
   <div class="end-body" id="end-body"></div>
   <div class="end-trust" id="end-trust"></div>
   <button class="replay-btn" onclick="restartGame()">もういちど よむ</button>
+  <a href="./index.html" class="menu-btn">🏠 こどもランドへ</a>
+</div>
+
+<!-- 確認モーダル（ゲーム途中でメニューへ戻る） -->
+<div id="confirm-modal">
+  <div class="confirm-box">
+    <div class="confirm-q">とちゅうで やめると\nさいしょから になるよ。\nほんとうに もどる？</div>
+    <div class="confirm-btns">
+      <button class="confirm-yes" onclick="window.location.href='./index.html'">🏠 メニューへ もどる</button>
+      <button class="confirm-no" onclick="$('confirm-modal').classList.remove('show')">つづける</button>
+    </div>
+  </div>
 </div>
 
 <!-- Flash transition -->
@@ -1072,6 +1160,10 @@ function restartGame() {
   S.trust_k = 0;
   updateTrust();
   showScene('c1_1');
+}
+
+function goHome() {
+  $('confirm-modal').classList.add('show');
 }
 
 // Init
