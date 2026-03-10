@@ -314,6 +314,7 @@ html, body {
   <div class="btn-group">
     <button class="btn btn-primary" onclick="goToDifficulty()">🤖 CPU と たいせん</button>
     <button class="btn btn-secondary" onclick="startGame('2p')">👫 ふたりで たいせん</button>
+    <a href="./index.html" class="btn btn-ghost" style="text-align:center;text-decoration:none;">🏠 メニューに もどる</a>
   </div>
 </div>
 
@@ -580,10 +581,8 @@ function confirmBack() {
   if (!gameOver && board.some(v => v !== null)) {
     if (!confirm('ゲームをやめますか？')) return;
   }
-  score = { O:0, D:0, X:0 };
-  updateScoreUI();
   clearConfetti();
-  showScreen('screen-title');
+  location.href = './index.html';
 }
 
 // ─── CPU AI ───
