@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>まるばつ ゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #2a1f4e;
+  --bg:     #fff8e7;
+  --o-col:  #ff6b6b;
+  --x-col:  #4e9af1;
+  --win:    #ffe066;
+  --cell-bg: #ffffff;
+  --cell-border: #e0d8f0;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100dvh;
+  font-family: 'Nunito', 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', sans-serif;
+  background: linear-gradient(160deg, #fff5f0 0%, #f0f4ff 50%, #f5fff0 100%);
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+/* ── Screens ── */
+.screen { display: none; flex-direction: column; align-items: center; justify-content: center;
+  height: 100dvh; padding: 24px 20px env(safe-area-inset-bottom) 20px; }
+.screen.active { display: flex; }
+
+/* ── Title Screen ── */
+#screen-title {
+  gap: 20px;
+  background: linear-gradient(160deg, #fff5f0 0%, #f0f4ff 50%, #f5fff0 100%);
+}
+
+.title-icon {
+  font-size: 72px;
+  animation: titleBounce 2s ease-in-out infinite;
+}
+@keyframes titleBounce {
+  0%,100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-10px) scale(1.05); }
+}
+
+.game-title {
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: 3px;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.9);
+  text-align: center;
+}
+
+.title-sub {
+  font-size: 14px;
+  color: #7a6aaa;
+  font-weight: 700;
+  text-align: center;
+}
+
+.btn-group { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 280px; }
+
+.btn {
+  width: 100%;
+  padding: 18px 24px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  border: none;
+  border-radius: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s ease;
+  letter-spacing: 1px;
+}
+.btn:active { transform: scale(0.93) !important; }
+
+.btn-primary {
+  background: linear-gradient(135deg, #ff8a7a, #ff6b6b);
+  color: white;
+  box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(255,107,107,0.45); }
+
+.btn-secondary {
+  background: linear-gradient(135deg, #7ec8f4, #4e9af1);
+  color: white;
+  box-shadow: 0 6px 20px rgba(78,154,241,0.4);
+}
+.btn-secondary:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(78,154,241,0.45); }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.7);
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  font-size: 15px;
+  padding: 14px 24px;
+}
+
+/* ── Difficulty Screen ── */
+#screen-difficulty { gap: 18px; }
+
+.screen-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.difficulty-cards { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; }
+
+.diff-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s ease;
+  text-align: left;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+.diff-card:active { transform: scale(0.93); }
+.diff-card:hover  { transform: translateY(-3px); }
+
+.diff-card.easy   { background: linear-gradient(135deg, #fffde0, #fff4b0); }
+.diff-card.normal { background: linear-gradient(135deg, #e0f5e0, #b8ecc8); }
+.diff-card.hard   { background: linear-gradient(135deg, #f0e0ff, #d8b8ff); }
+
+.diff-icon { font-size: 36px; }
+.diff-info { display: flex; flex-direction: column; }
+.diff-name { font-size: 20px; font-weight: 900; color: var(--ink); }
+.diff-desc { font-size: 12px; color: #7a6aaa; font-weight: 700; margin-top: 2px; }
+
+/* ── Game Screen ── */
+#screen-game {
+  justify-content: space-between;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  gap: 0;
+}
+
+/* Top bar */
+.top-bar {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 4px; margin-bottom: 8px;
+}
+
+.mode-badge {
+  font-size: 13px; font-weight: 900; color: #7a6aaa;
+  background: rgba(255,255,255,0.8);
+  padding: 5px 12px; border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.back-btn {
+  background: rgba(255,255,255,0.8);
+  border: none; border-radius: 50%; width: 38px; height: 38px;
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  touch-action: manipulation;
+  transition: transform 0.15s;
+}
+.back-btn:active { transform: scale(0.88); }
+
+/* Score area */
+.score-area {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; width: 100%; margin-bottom: 10px;
+}
+
+.score-box {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(255,255,255,0.75);
+  border-radius: 16px; padding: 8px 18px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  min-width: 70px;
+}
+.score-label { font-size: 12px; font-weight: 900; margin-bottom: 2px; }
+.score-label.o { color: var(--o-col); }
+.score-label.x { color: var(--x-col); }
+.score-label.d { color: #8a9aaa; }
+.score-num { font-size: 26px; font-weight: 900; color: var(--ink); line-height: 1; }
+
+.score-sep { font-size: 22px; color: #c0b8d8; font-weight: 900; }
+
+/* Turn display */
+.turn-display {
+  font-size: 22px; font-weight: 900;
+  color: var(--ink);
+  text-align: center;
+  min-height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+  transition: opacity 0.2s;
+}
+
+.turn-mark {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 8px;
+  margin: 0 4px;
+  font-size: 24px;
+}
+.turn-mark.o { color: var(--o-col); }
+.turn-mark.x { color: var(--x-col); }
+
+/* Board */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: min(90vw, 340px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.cell {
+  background: var(--cell-bg);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(36px, 13vw, 72px);
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.9);
+  transition: transform 0.12s cubic-bezier(.34,1.56,.64,1), box-shadow 0.12s ease, background 0.2s;
+  user-select: none;
+  border: 2px solid var(--cell-border);
+}
+.cell:active:not(.taken) { transform: scale(0.88); }
+.cell.taken { cursor: default; }
+
+.cell .mark {
+  display: inline-block;
+  animation: markPop 0.22s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes markPop {
+  from { transform: scale(0) rotate(-20deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+}
+
+.cell .mark.o { color: var(--o-col); }
+.cell .mark.x { color: var(--x-col); }
+
+.cell.win-cell {
+  background: var(--win);
+  box-shadow: 0 0 0 3px #ffc107, 0 4px 20px rgba(255,193,7,0.5);
+  animation: winPulse 0.7s ease-in-out infinite alternate;
+}
+@keyframes winPulse {
+  from { box-shadow: 0 0 0 3px #ffc107, 0 4px 20px rgba(255,193,7,0.5); }
+  to   { box-shadow: 0 0 0 5px #ffa000, 0 6px 28px rgba(255,160,0,0.65); }
+}
+
+/* Result overlay */
+.result-overlay {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(6px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px;
+  z-index: 10;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.result-overlay.hidden { display: none; }
+
+.result-emoji { font-size: 80px; animation: resultBounce 0.5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes resultBounce { from { transform: scale(0) rotate(-30deg); } to { transform: scale(1) rotate(0); } }
+
+.result-text {
+  font-size: 32px; font-weight: 900; color: var(--ink);
+  text-align: center; letter-spacing: 2px;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.9);
+}
+
+.result-btn-group { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 260px; }
+
+/* Confetti */
+.confetti-container {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 9;
+}
+.confetti-piece {
+  position: absolute;
+  width: 10px; height: 14px;
+  border-radius: 3px;
+  animation: confettiFall linear forwards;
+  top: -20px;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ タイトル画面 ═══════════════ -->
+<div id="screen-title" class="screen active">
+  <div class="title-icon">⭕</div>
+  <div class="game-title">まるばつ<br>ゲーム</div>
+  <div class="title-sub">○と×でたいけつしよう！</div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goToDifficulty()">🤖 CPU と たいせん</button>
+    <button class="btn btn-secondary" onclick="startGame('2p')">👫 ふたりで たいせん</button>
+  </div>
+</div>
+
+<!-- ═══════════════ 難易度選択画面 ═══════════════ -->
+<div id="screen-difficulty" class="screen">
+  <div class="screen-title">どの つよさと<br>たたかう？</div>
+  <div class="difficulty-cards">
+    <button class="diff-card easy"   onclick="startGame('cpu','easy')">
+      <div class="diff-icon">🐥</div>
+      <div class="diff-info">
+        <div class="diff-name">ひよっこ</div>
+        <div class="diff-desc">ランダムに うつよ</div>
+      </div>
+    </button>
+    <button class="diff-card normal" onclick="startGame('cpu','normal')">
+      <div class="diff-icon">👫</div>
+      <div class="diff-info">
+        <div class="diff-name">おともだち</div>
+        <div class="diff-desc">すこし かんがえるよ</div>
+      </div>
+    </button>
+    <button class="diff-card hard"   onclick="startGame('cpu','hard')">
+      <div class="diff-icon">🧙</div>
+      <div class="diff-info">
+        <div class="diff-name">ししょう</div>
+        <div class="diff-desc">ぜったいに まけないよ！</div>
+      </div>
+    </button>
+  </div>
+  <button class="btn btn-ghost" style="max-width:300px;margin-top:4px;" onclick="showScreen('screen-title')">← もどる</button>
+</div>
+
+<!-- ═══════════════ ゲーム画面 ═══════════════ -->
+<div id="screen-game" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="confirmBack()">←</button>
+    <div class="mode-badge" id="mode-badge">CPU: ひよっこ</div>
+    <div style="width:38px;"></div>
+  </div>
+
+  <div class="score-area">
+    <div class="score-box">
+      <div class="score-label o">○</div>
+      <div class="score-num" id="score-o">0</div>
+    </div>
+    <div class="score-sep">/</div>
+    <div class="score-box">
+      <div class="score-label d">△</div>
+      <div class="score-num" id="score-d">0</div>
+    </div>
+    <div class="score-sep">/</div>
+    <div class="score-box">
+      <div class="score-label x">×</div>
+      <div class="score-num" id="score-x">0</div>
+    </div>
+  </div>
+
+  <div class="turn-display" id="turn-display">
+    <span class="turn-mark o">○</span>のばん
+  </div>
+
+  <div class="board" id="board">
+    <div class="cell" onclick="cellClick(0)"></div>
+    <div class="cell" onclick="cellClick(1)"></div>
+    <div class="cell" onclick="cellClick(2)"></div>
+    <div class="cell" onclick="cellClick(3)"></div>
+    <div class="cell" onclick="cellClick(4)"></div>
+    <div class="cell" onclick="cellClick(5)"></div>
+    <div class="cell" onclick="cellClick(6)"></div>
+    <div class="cell" onclick="cellClick(7)"></div>
+    <div class="cell" onclick="cellClick(8)"></div>
+  </div>
+
+  <div style="height: 16px;"></div>
+</div>
+
+<!-- ═══════════════ 結果オーバーレイ ═══════════════ -->
+<div id="result-overlay" class="result-overlay hidden">
+  <div class="result-emoji" id="result-emoji">🎉</div>
+  <div class="result-text"  id="result-text">○のかち！</div>
+  <div class="result-btn-group">
+    <button class="btn btn-primary" onclick="rematch()">もう いちど！</button>
+    <button class="btn btn-ghost"   onclick="confirmBack()">もどる</button>
+  </div>
+</div>
+
+<!-- ═══════════════ 紙吹雪コンテナ ═══════════════ -->
+<div class="confetti-container" id="confetti-container"></div>
+
+<script>
+// ─── 状態 ───
+const LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+const DIFF_NAMES = { easy:'🐥 ひよっこ', normal:'👫 おともだち', hard:'🧙 ししょう' };
+
+let mode       = 'cpu';   // 'cpu' | '2p'
+let difficulty = 'easy';
+let board      = Array(9).fill(null); // null | 'O' | 'X'
+let current    = 'O';
+let gameOver   = false;
+let cpuThinking = false;
+let score      = { O:0, D:0, X:0 };
+
+// ─── 画面切り替え ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goToDifficulty() {
+  showScreen('screen-difficulty');
+}
+
+function startGame(m, diff) {
+  mode = m;
+  difficulty = diff || 'easy';
+  board    = Array(9).fill(null);
+  current  = 'O';
+  gameOver = false;
+  cpuThinking = false;
+
+  // モードバッジ
+  const badge = document.getElementById('mode-badge');
+  badge.textContent = mode === 'cpu' ? 'CPU: ' + DIFF_NAMES[difficulty] : '👫 ふたりたいせん';
+
+  renderBoard();
+  updateTurnDisplay();
+  document.getElementById('result-overlay').classList.add('hidden');
+  clearConfetti();
+  showScreen('screen-game');
+}
+
+// ─── ボード描画 ───
+function renderBoard() {
+  const cells = document.querySelectorAll('.cell');
+  cells.forEach((cell, i) => {
+    const v = board[i];
+    cell.className = 'cell' + (v ? ' taken' : '');
+    cell.innerHTML = v ? `<span class="mark ${v === 'O' ? 'o' : 'x'}">${v === 'O' ? '○' : '×'}</span>` : '';
+  });
+}
+
+function highlightWin(line) {
+  const cells = document.querySelectorAll('.cell');
+  line.forEach(i => cells[i].classList.add('win-cell'));
+}
+
+// ─── ターン表示 ───
+function updateTurnDisplay(msg) {
+  const el = document.getElementById('turn-display');
+  if (msg) { el.innerHTML = msg; return; }
+  const mark = current === 'O'
+    ? '<span class="turn-mark o">○</span>'
+    : '<span class="turn-mark x">×</span>';
+  if (mode === '2p') {
+    el.innerHTML = mark + 'のばん';
+  } else {
+    el.innerHTML = current === 'O' ? mark + 'のばん（あなた）' : mark + 'のばん';
+  }
+}
+
+// ─── セルクリック ───
+function cellClick(i) {
+  if (gameOver || board[i] || cpuThinking) return;
+  if (mode === 'cpu' && current === 'X') return; // CPUの番は操作しない
+
+  placeMove(i, current);
+}
+
+function placeMove(i, player) {
+  board[i] = player;
+  renderBoard();
+
+  const result = checkWin(board);
+  if (result) {
+    endGame(result);
+    return;
+  }
+  if (board.every(v => v !== null)) {
+    endGame({ winner: null });
+    return;
+  }
+
+  current = current === 'O' ? 'X' : 'O';
+  updateTurnDisplay();
+
+  if (mode === 'cpu' && current === 'X') {
+    cpuThinking = true;
+    updateTurnDisplay('<span style="color:#7a6aaa">CPUが かんがえてる…🤔</span>');
+    setTimeout(() => {
+      const move = cpuMove(board, difficulty);
+      cpuThinking = false;
+      placeMove(move, 'X');
+    }, difficulty === 'easy' ? 400 : difficulty === 'normal' ? 650 : 800);
+  }
+}
+
+// ─── 勝利チェック ───
+function checkWin(b) {
+  for (const line of LINES) {
+    const [a,c,d] = line;
+    if (b[a] && b[a] === b[c] && b[a] === b[d]) {
+      return { winner: b[a], line };
+    }
+  }
+  return null;
+}
+
+// ─── ゲーム終了 ───
+function endGame(result) {
+  gameOver = true;
+  const overlay = document.getElementById('result-overlay');
+
+  if (result && result.winner) {
+    highlightWin(result.line);
+    const winner = result.winner;
+    score[winner]++;
+    updateScoreUI();
+
+    let emoji, text;
+    if (mode === 'cpu') {
+      if (winner === 'O') { emoji = '🎉'; text = 'あなたの かち！'; }
+      else                { emoji = '😢'; text = 'CPUの かち…'; }
+    } else {
+      emoji = '🎉';
+      text  = winner === 'O' ? '○の かち！' : '×の かち！';
+    }
+    document.getElementById('result-emoji').textContent = emoji;
+    document.getElementById('result-text').textContent  = text;
+    if (winner === 'O' || mode === '2p') launchConfetti();
+  } else {
+    score.D++;
+    updateScoreUI();
+    document.getElementById('result-emoji').textContent = '🤝';
+    document.getElementById('result-text').textContent  = 'ひきわけ！';
+  }
+
+  overlay.classList.remove('hidden');
+}
+
+function updateScoreUI() {
+  document.getElementById('score-o').textContent = score.O;
+  document.getElementById('score-d').textContent = score.D;
+  document.getElementById('score-x').textContent = score.X;
+}
+
+// ─── リマッチ ───
+function rematch() {
+  board    = Array(9).fill(null);
+  current  = 'O';
+  gameOver = false;
+  cpuThinking = false;
+  document.getElementById('result-overlay').classList.add('hidden');
+  clearConfetti();
+  renderBoard();
+  updateTurnDisplay();
+}
+
+// ─── 戻る確認 ───
+function confirmBack() {
+  if (!gameOver && board.some(v => v !== null)) {
+    if (!confirm('ゲームをやめますか？')) return;
+  }
+  score = { O:0, D:0, X:0 };
+  updateScoreUI();
+  clearConfetti();
+  showScreen('screen-title');
+}
+
+// ─── CPU AI ───
+function cpuMove(b, diff) {
+  const empty = b.map((v,i) => v === null ? i : -1).filter(i => i !== -1);
+
+  if (diff === 'easy') {
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  if (diff === 'normal') {
+    // 勝てるマス
+    for (const i of empty) {
+      const t = [...b]; t[i] = 'X';
+      if (checkWin(t)) return i;
+    }
+    // ブロック
+    for (const i of empty) {
+      const t = [...b]; t[i] = 'O';
+      if (checkWin(t)) return i;
+    }
+    // センター
+    if (b[4] === null) return 4;
+    // ランダム
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  // hard: ミニマックス
+  return minimax(b, 'X').index;
+}
+
+function minimax(b, player) {
+  const empty = b.map((v,i) => v === null ? i : -1).filter(i => i !== -1);
+  const win = checkWin(b);
+  if (win) return { score: win.winner === 'X' ? 10 : -10 };
+  if (empty.length === 0) return { score: 0 };
+
+  const moves = [];
+  for (const i of empty) {
+    const t = [...b]; t[i] = player;
+    const result = minimax(t, player === 'X' ? 'O' : 'X');
+    moves.push({ index: i, score: result.score });
+  }
+
+  if (player === 'X') {
+    moves.sort((a,b) => b.score - a.score);
+  } else {
+    moves.sort((a,b) => a.score - b.score);
+  }
+  return moves[0];
+}
+
+// ─── 紙吹雪 ───
+const CONFETTI_COLORS = ['#ff6b6b','#ffd93d','#4e9af1','#6bcb77','#c77dff','#ff9f40'];
+
+function launchConfetti() {
+  const container = document.getElementById('confetti-container');
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left    = Math.random() * 100 + 'vw';
+    el.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    el.style.transform  = `rotate(${Math.random()*360}deg)`;
+    el.style.width      = (8 + Math.random() * 8) + 'px';
+    el.style.height     = (10 + Math.random() * 10) + 'px';
+    const dur = 1.8 + Math.random() * 1.4;
+    el.style.animationDuration = dur + 's';
+    el.style.animationDelay   = (Math.random() * 0.6) + 's';
+    container.appendChild(el);
+    setTimeout(() => el.remove(), (dur + 0.6) * 1000);
+  }
+}
+
+function clearConfetti() {
+  document.getElementById('confetti-container').innerHTML = '';
+}
+</script>
+</body>
+</html>
