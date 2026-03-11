@@ -20,7 +20,8 @@ child-playground/
     ├── index.html          # メニュー画面（こどもランド）
     ├── bouken-meiro.html   # ぼうけん迷路
     ├── tashite-goal.html   # たしてゴール！
-    └── music.html          # おんがく リズムゲーム
+    ├── music.html          # おんがく リズムゲーム
+    └── nakamawake.html     # なかまわけ名人
 ```
 
 > 新しいコンテンツは `.html` ファイルを追加し、`index.html` のカードを更新するだけで拡充できます。
@@ -35,6 +36,7 @@ child-playground/
 | `tashite-goal.html` | 🔢 たして ゴール！ | ✅ 公開中 | 5歳〜小1 |
 | *(未作成)* | 🎨 おえかき | 🔜 準備中 | — |
 | `music.html` | 🎹 おんがく | ✅ 公開中 | 5歳〜小1 |
+| `nakamawake.html` | 🔍 なかまわけ 名人 | ✅ 公開中 | 4〜6歳 |
 | *(未作成)* | 🧠 クイズ | 🔜 準備中 | — |
 | *(未作成)* | 📖 おはなし | 🔜 準備中 | — |
 
