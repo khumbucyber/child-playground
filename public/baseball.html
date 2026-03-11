@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚾ バッティングあそび</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+html, body { width:100%; height:100dvh; overflow:hidden; font-family:'Hiragino Maru Gothic Pro','BIZ UDPGothic',sans-serif; background:#1a1a2e; }
+
+#gameCanvas { display:block; width:100%; height:100dvh; }
+
+/* UI Overlay */
+#ui {
+  position:fixed; top:0; left:0; width:100%; height:100dvh;
+  pointer-events:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  z-index:10;
+}
+
+/* Result display */
+#result {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-60%);
+  font-size:64px; font-weight:900; text-align:center;
+  pointer-events:none; z-index:20;
+  opacity:0; transition:none;
+  text-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  line-height:1.1;
+}
+#result.show {
+  animation: resultPop 1.8s ease-out forwards;
+}
+@keyframes resultPop {
+  0%   { opacity:0; transform:translate(-50%,-60%) scale(0.5); }
+  20%  { opacity:1; transform:translate(-50%,-60%) scale(1.15); }
+  40%  { transform:translate(-50%,-60%) scale(1); }
+  70%  { opacity:1; transform:translate(-50%,-60%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-75%) scale(0.9); }
+}
+
+/* Buttons */
+#pitchBtn, #swingBtn {
+  pointer-events:all;
+  border:none; outline:none; cursor:pointer;
+  border-radius:999px;
+  font-family:inherit; font-weight:900;
+  transition: transform 0.12s cubic-bezier(.34,1.56,.64,1), box-shadow 0.12s;
+  -webkit-tap-highlight-color:transparent;
+}
+#pitchBtn {
+  padding:18px 48px;
+  font-size:22px;
+  background:linear-gradient(145deg,#ffd700,#ff8c00);
+  color:#1a1a2e;
+  box-shadow:0 6px 20px rgba(255,140,0,0.5), 0 3px 0 #b85c00;
+  letter-spacing:1px;
+}
+#pitchBtn:active { transform:scale(0.93); box-shadow:0 2px 8px rgba(255,140,0,0.4); }
+
+#swingBtn {
+  padding:20px 0;
+  width:220px;
+  font-size:26px;
+  background:linear-gradient(145deg,#ff4d6d,#c9184a);
+  color:white;
+  box-shadow:0 6px 20px rgba(201,24,74,0.55), 0 4px 0 #7b0d29;
+  letter-spacing:2px;
+}
+#swingBtn:active { transform:scale(0.93); }
+#swingBtn.disabled { opacity:0.4; pointer-events:none; }
+
+/* Timing bar */
+#timingWrap {
+  width:90%; max-width:360px;
+  margin-bottom:16px;
+  background:rgba(0,0,0,0.4);
+  border-radius:999px;
+  height:22px;
+  position:relative;
+  overflow:hidden;
+  border:2px solid rgba(255,255,255,0.2);
+  display:none;
+}
+#timingBar {
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#00e5ff,#00ff88,#ffeb3b,#ff5722);
+  border-radius:999px;
+  transition:none;
+}
+#timingMarker {
+  position:absolute; top:0; bottom:0;
+  width:4px; background:white;
+  border-radius:2px;
+  box-shadow:0 0 8px white;
+  left:0;
+}
+
+#homeBtn {
+  position:fixed; top:16px; left:16px;
+  pointer-events:all;
+  background:rgba(255,255,255,0.18);
+  border:2px solid rgba(255,255,255,0.3);
+  color:white; font-size:14px; font-weight:900;
+  padding:8px 14px; border-radius:999px;
+  cursor:pointer; font-family:inherit;
+  backdrop-filter:blur(4px);
+  z-index:30;
+}
+#homeBtn:active { transform:scale(0.9); }
+
+#scoreDisplay {
+  position:fixed; top:16px; right:16px;
+  pointer-events:none; z-index:30;
+  background:rgba(0,0,0,0.4);
+  border:2px solid rgba(255,255,255,0.2);
+  border-radius:16px;
+  padding:8px 14px;
+  color:white; font-size:13px; font-weight:900;
+  text-align:center;
+  backdrop-filter:blur(4px);
+}
+#scoreDisplay .big { font-size:20px; display:block; }
+
+/* particle canvas */
+#particleCanvas {
+  position:fixed; top:0; left:0; width:100%; height:100dvh;
+  pointer-events:none; z-index:15;
+}
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<canvas id="particleCanvas"></canvas>
+
+<div id="result"></div>
+
+<button id="homeBtn">🏠 もどる</button>
+
+<div id="scoreDisplay">
+  <span class="big" id="hitCount">0</span>
+  ヒット
+</div>
+
+<div id="ui">
+  <div id="timingWrap"><div id="timingBar"></div><div id="timingMarker"></div></div>
+  <button id="pitchBtn">⚾ なげて！</button>
+  <button id="swingBtn" style="display:none">🏏 ふる！</button>
+</div>
+
+<script>
+// ─── Canvas setup ───────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const pCanvas = document.getElementById('particleCanvas');
+const pCtx = pCanvas.getContext('2d');
+
+function resize() {
+  canvas.width = pCanvas.width = window.innerWidth;
+  canvas.height = pCanvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); drawScene(); });
+
+// ─── State ──────────────────────────────────────────────────────
+const STATE = { IDLE:0, PITCHING:1, RESULT:2 };
+let state = STATE.IDLE;
+let ballX, ballY, ballProgress; // 0=pitcher → 1=home plate
+let pitchStart, pitchDuration;
+let swingTime = null;
+let isStrike = true; // pitch in strike zone?
+let pitchType = 'normal'; // 'normal','fast','slow'
+let particles = [];
+let hitCount = 0;
+let swungDuringPitch = false;
+let flyBallAnim = null; // {x,y,tx,ty,progress}
+let batterSwing = false;
+let batterSwingT = 0;
+let crowdCheer = false;
+
+// ─── Field drawing ──────────────────────────────────────────────
+function drawScene() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const horizonY = H * 0.38;
+  const vanishX = W * 0.5;
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
+  sky.addColorStop(0, '#1a6eb5');
+  sky.addColorStop(1, '#5bbef0');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, horizonY);
+
+  // Stands (left)
+  drawStands(ctx, W, H, horizonY, vanishX);
+
+  // Outfield grass
+  const outGrass = ctx.createLinearGradient(0, horizonY, 0, horizonY + H*0.2);
+  outGrass.addColorStop(0, '#3a9a3a');
+  outGrass.addColorStop(1, '#2d7a2d');
+  ctx.fillStyle = outGrass;
+  ctx.beginPath();
+  ctx.moveTo(0, horizonY);
+  ctx.lineTo(W, horizonY);
+  ctx.lineTo(W, horizonY + H*0.2);
+  ctx.lineTo(0, horizonY + H*0.2);
+  ctx.fill();
+
+  // Infield dirt (trapezoid)
+  const dirtTop = horizonY + H*0.04;
+  const dirtBot = H * 0.80;
+  ctx.fillStyle = '#c8874a';
+  ctx.beginPath();
+  ctx.moveTo(vanishX - W*0.08, dirtTop);
+  ctx.lineTo(vanishX + W*0.08, dirtTop);
+  ctx.lineTo(W*0.85, dirtBot);
+  ctx.lineTo(W*0.15, dirtBot);
+  ctx.closePath();
+  ctx.fill();
+
+  // Infield grass (inside dirt diamond)
+  ctx.fillStyle = '#4ab44a';
+  ctx.beginPath();
+  ctx.moveTo(vanishX, dirtTop + H*0.03);
+  ctx.lineTo(vanishX + W*0.06, dirtTop + H*0.1);
+  ctx.lineTo(vanishX, dirtTop + H*0.18);
+  ctx.lineTo(vanishX - W*0.06, dirtTop + H*0.1);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bases
+  drawBase(ctx, vanishX, dirtTop + H*0.03, 10); // 2nd base (center top)
+  drawBase(ctx, vanishX + W*0.06, dirtTop + H*0.1, 10); // 1st base right
+  drawBase(ctx, vanishX - W*0.06, dirtTop + H*0.1, 10); // 3rd base left
+
+  // Pitcher's mound
+  drawMound(ctx, vanishX, dirtTop + H*0.09, W, H, horizonY);
+
+  // Home plate area (near bottom)
+  ctx.fillStyle = '#b07040';
+  ctx.beginPath();
+  ctx.moveTo(W*0.3, dirtBot);
+  ctx.lineTo(W*0.7, dirtBot);
+  ctx.lineTo(W*0.72, H*0.88);
+  ctx.lineTo(W*0.28, H*0.88);
+  ctx.closePath();
+  ctx.fill();
+
+  // Home plate
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.moveTo(W*0.5, H*0.86);
+  ctx.lineTo(W*0.54, H*0.84);
+  ctx.lineTo(W*0.54, H*0.82);
+  ctx.lineTo(W*0.46, H*0.82);
+  ctx.lineTo(W*0.46, H*0.84);
+  ctx.closePath();
+  ctx.fill();
+
+  // Foul lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8,6]);
+  ctx.beginPath();
+  ctx.moveTo(W*0.5, H*0.84);
+  ctx.lineTo(W*0.1, horizonY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W*0.5, H*0.84);
+  ctx.lineTo(W*0.9, horizonY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Fielders
+  drawFielders(ctx, W, H, horizonY, vanishX, dirtTop);
+
+  // Pitcher (animated if pitching)
+  drawPitcher(ctx, W, H, horizonY, vanishX, dirtTop);
+
+  // Batter
+  drawBatter(ctx, W, H);
+
+  // Catcher
+  drawCatcher(ctx, W, H);
+
+  // Flying ball (if hit animation)
+  if (flyBallAnim) {
+    const p = flyBallAnim.progress;
+    const bx = flyBallAnim.x + (flyBallAnim.tx - flyBallAnim.x) * p;
+    const by = flyBallAnim.y + (flyBallAnim.ty - flyBallAnim.y) * p - Math.sin(p * Math.PI) * H * 0.25;
+    const r = 10 + (1 - p) * 6;
+    ctx.fillStyle = 'white';
+    ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#cc3333'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bx - r*0.4, by - r*0.2); ctx.lineTo(bx + r*0.4, by - r*0.2);
+    ctx.moveTo(bx, by - r*0.5); ctx.lineTo(bx, by + r*0.5);
+    ctx.stroke();
+  }
+
+  // Pitched ball
+  if (state === STATE.PITCHING && ballProgress !== undefined) {
+    const bx = W * 0.5;
+    const pitcherY = dirtTop + H*0.09;
+    const homeY = H * 0.73;
+    // Lateral drift for ball type
+    let lateralX = W * 0.5;
+    if (!isStrike) lateralX = W * (0.5 + (Math.random() > 0.5 ? 0.12 : -0.12) * ballProgress);
+    const by = pitcherY + (homeY - pitcherY) * ballProgress;
+    const bx2 = vanishX + (W*0.5 - vanishX) * ballProgress;
+    const r = 4 + ballProgress * 14;
+    ctx.fillStyle = 'white';
+    ctx.beginPath(); ctx.arc(bx2 + (lateralX - W*0.5) * ballProgress, by, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#cc3333'; ctx.lineWidth = Math.max(1, r*0.2);
+    ctx.beginPath();
+    ctx.arc(bx2 + (lateralX - W*0.5) * ballProgress, by, r*0.6, 0.3, 1.2);
+    ctx.stroke();
+  }
+}
+
+function drawStands(ctx, W, H, horizonY, vx) {
+  // Left stands
+  const standGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+  standGrad.addColorStop(0, '#2244aa');
+  standGrad.addColorStop(1, '#3355cc');
+  ctx.fillStyle = standGrad;
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(W*0.38, 0); ctx.lineTo(vx*0.7, horizonY); ctx.lineTo(0, horizonY);
+  ctx.fill();
+  // Right stands
+  ctx.beginPath();
+  ctx.moveTo(W,0); ctx.lineTo(W*0.62, 0); ctx.lineTo(vx + W*0.15, horizonY); ctx.lineTo(W, horizonY);
+  ctx.fill();
+  // Center field wall
+  ctx.fillStyle = '#1a3388';
+  ctx.fillRect(W*0.38, 0, W*0.24, horizonY * 0.85);
+
+  // Crowd rows (tiny dots)
+  ctx.fillStyle = 'rgba(255,200,100,0.35)';
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 30; col++) {
+      const cx = col * (W / 30) + (row%2)*10;
+      const cy = row * (horizonY / 8) + 10;
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  // Scoreboard
+  ctx.fillStyle = '#111133';
+  ctx.fillRect(W*0.4, horizonY*0.05, W*0.2, horizonY*0.4);
+  ctx.fillStyle = '#ffdd00';
+  ctx.font = `bold ${Math.floor(W*0.025)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('BALL PARK', W*0.5, horizonY*0.22);
+  ctx.fillStyle = '#ff4444';
+  ctx.fillText('⚾ あそぼう！', W*0.5, horizonY*0.36);
+}
+
+function drawBase(ctx, x, y, size) {
+  ctx.fillStyle = 'white';
+  ctx.fillRect(x - size/2, y - size/2, size, size);
+}
+
+function drawMound(ctx, x, y, W, H, horizonY) {
+  ctx.fillStyle = '#b87040';
+  ctx.beginPath();
+  ctx.ellipse(x, y, W*0.04, H*0.025, 0, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function drawFielders(ctx, W, H, horizonY, vx, dirtTop) {
+  // SS (left of 2nd)
+  drawPlayer(ctx, vx - W*0.06, dirtTop + H*0.06, W*0.022, '#cc2222', false);
+  // 2B (right of 2nd)
+  drawPlayer(ctx, vx + W*0.07, dirtTop + H*0.05, W*0.022, '#cc2222', false);
+  // CF (deep center)
+  drawPlayer(ctx, vx, horizonY + H*0.08, W*0.018, '#cc2222', false);
+  // LF
+  drawPlayer(ctx, vx - W*0.18, horizonY + H*0.06, W*0.018, '#cc2222', false);
+  // RF
+  drawPlayer(ctx, vx + W*0.18, horizonY + H*0.06, W*0.018, '#cc2222', false);
+  // 1B
+  drawPlayer(ctx, W*0.68, dirtTop + H*0.15, W*0.024, '#cc2222', false);
+  // 3B
+  drawPlayer(ctx, W*0.32, dirtTop + H*0.15, W*0.024, '#cc2222', false);
+}
+
+function drawPlayer(ctx, x, y, size, color, hasGlove) {
+  // Body
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(x, y, size*0.4, size*0.6, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Head
+  ctx.fillStyle = '#fdbcb4';
+  ctx.beginPath();
+  ctx.arc(x, y - size*0.7, size*0.35, 0, Math.PI*2);
+  ctx.fill();
+  // Cap
+  ctx.fillStyle = '#1a1a6e';
+  ctx.beginPath();
+  ctx.arc(x, y - size*0.8, size*0.35, Math.PI, Math.PI*2);
+  ctx.fill();
+  ctx.fillRect(x - size*0.4, y - size*0.9, size*0.8, size*0.12);
+}
+
+function drawPitcher(ctx, W, H, horizonY, vx, dirtTop) {
+  const x = vx;
+  const y = dirtTop + H*0.09;
+  const size = W * 0.028;
+  const wind = (state === STATE.PITCHING && ballProgress < 0.15) ? ballProgress / 0.15 : 0;
+
+  ctx.fillStyle = '#cc2222';
+  ctx.beginPath();
+  ctx.ellipse(x, y, size*0.5, size*0.7, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Head
+  ctx.fillStyle = '#fdbcb4';
+  ctx.beginPath(); ctx.arc(x, y - size*0.85, size*0.4, 0, Math.PI*2); ctx.fill();
+  // Cap
+  ctx.fillStyle = '#1a1a6e';
+  ctx.beginPath(); ctx.arc(x, y - size*0.95, size*0.4, Math.PI, Math.PI*2); ctx.fill();
+  ctx.fillRect(x - size*0.5, y - size*1.05, size, size*0.13);
+  // Arm (wind-up)
+  ctx.strokeStyle = '#fdbcb4'; ctx.lineWidth = size*0.3; ctx.lineCap = 'round';
+  const armAngle = -Math.PI/2 - wind * Math.PI * 0.8;
+  ctx.beginPath();
+  ctx.moveTo(x, y - size*0.2);
+  ctx.lineTo(x + Math.cos(armAngle)*size*1.1, y + Math.sin(armAngle)*size*1.1);
+  ctx.stroke();
+}
+
+function drawBatter(ctx, W, H) {
+  const x = W * 0.26;
+  const y = H * 0.82;
+  const size = W * 0.055;
+  const swing = batterSwing ? Math.min(1, batterSwingT) : 0;
+
+  // legs
+  ctx.strokeStyle = '#1a1a6e'; ctx.lineWidth = size*0.25; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y + size*0.1); ctx.lineTo(x - size*0.2, y + size*0.9); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y + size*0.1); ctx.lineTo(x + size*0.2, y + size*0.9); ctx.stroke();
+  // body
+  ctx.fillStyle = 'white';
+  ctx.beginPath(); ctx.ellipse(x, y, size*0.38, size*0.55, 0, 0, Math.PI*2); ctx.fill();
+  // helmet
+  ctx.fillStyle = '#1a1a6e';
+  ctx.beginPath(); ctx.arc(x, y - size*0.65, size*0.42, Math.PI, Math.PI*2); ctx.fill();
+  ctx.fillRect(x - size*0.42, y - size*0.72, size*0.84, size*0.12);
+  ctx.beginPath(); ctx.arc(x, y-size*0.72, size*0.08, 0, Math.PI*2); ctx.fill();
+  // ear flap
+  ctx.beginPath(); ctx.arc(x + size*0.38, y - size*0.6, size*0.18, 0, Math.PI*2); ctx.fill();
+  // face
+  ctx.fillStyle = '#fdbcb4';
+  ctx.beginPath(); ctx.arc(x, y - size*0.52, size*0.28, 0, Math.PI); ctx.fill();
+
+  // bat
+  const batAngle = swing > 0 ? -Math.PI*0.6 + swing * Math.PI * 0.9 : -Math.PI*0.5;
+  ctx.save();
+  ctx.translate(x + size*0.3, y - size*0.1);
+  ctx.rotate(batAngle);
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(-size*0.07, -size*1.5, size*0.14, size*1.5);
+  ctx.fillStyle = '#a0522d';
+  ctx.beginPath(); ctx.arc(0, -size*1.5, size*0.18, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawCatcher(ctx, W, H) {
+  const x = W * 0.5;
+  const y = H * 0.92;
+  const size = W * 0.045;
+  // catcher crouching
+  ctx.fillStyle = '#cc4400';
+  ctx.beginPath(); ctx.ellipse(x, y, size*0.5, size*0.35, 0, 0, Math.PI*2); ctx.fill();
+  // mask
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(x, y - size*0.35, size*0.38, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#555'; ctx.lineWidth = size*0.06;
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(x + i*size*0.1, y - size*0.62);
+    ctx.lineTo(x + i*size*0.1, y - size*0.1);
+    ctx.stroke();
+  }
+  // Mitt
+  ctx.fillStyle = '#8B4513';
+  ctx.beginPath(); ctx.arc(x + size*0.7, y - size*0.1, size*0.35, 0, Math.PI*2); ctx.fill();
+}
+
+// ─── Timing / Judgment ──────────────────────────────────────────
+// Returns 0..1 where 1=perfect
+function getTimingScore(progress) {
+  // Sweet spot: 0.72-0.88 of ball travel
+  const center = 0.80;
+  const halfWindow = 0.14;
+  const dist = Math.abs(progress - center);
+  if (dist > halfWindow * 2) return 0;
+  return Math.max(0, 1 - dist / halfWindow);
+}
+
+function judgeResult(swungAt, progress, inStrikeZone) {
+  if (!swungAt) {
+    return inStrikeZone ? { text:'みのがし…', sub:'ストライク！', color:'#ffcc00', type:'strike' }
+                       : { text:'ボール！', sub:'', color:'#44aaff', type:'ball' };
+  }
+  const score = getTimingScore(progress);
+  if (score >= 0.85) {
+    return { text:'ホームラン！！', sub:'🎆 かんぺき！', color:'#ff4400', type:'homerun' };
+  } else if (score >= 0.6) {
+    const r = Math.random();
+    if (r < 0.5) return { text:'ヒット！', sub:'⚾ うまい！', color:'#ffdd00', type:'hit' };
+    return { text:'ぼんだ！', sub:'フライボール', color:'#88ff44', type:'fly' };
+  } else if (score >= 0.25) {
+    return { text:'ファール', sub:'おしい…', color:'#ff8844', type:'foul' };
+  } else {
+    return { text:'からぶり！', sub:'ミス…', color:'#ff44aa', type:'miss' };
+  }
+}
+
+// ─── Particles ──────────────────────────────────────────────────
+function spawnParticles(x, y, color, count, type) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 4 + Math.random() * (type === 'homerun' ? 14 : 7);
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - (type==='homerun'?8:3),
+      life: 1, decay: 0.018 + Math.random()*0.02,
+      size: 4 + Math.random() * (type==='homerun' ? 10 : 6),
+      color: type==='homerun'
+        ? ['#ff4400','#ffdd00','#ff88ff','#00eeff'][Math.floor(Math.random()*4)]
+        : color
+    });
+  }
+}
+
+function updateParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.life -= p.decay;
+    pCtx.globalAlpha = Math.max(0, p.life);
+    pCtx.fillStyle = p.color;
+    pCtx.beginPath(); pCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2); pCtx.fill();
+  });
+  pCtx.globalAlpha = 1;
+}
+
+// ─── Main game loop ─────────────────────────────────────────────
+let lastTime = 0;
+function loop(ts) {
+  const dt = ts - lastTime; lastTime = ts;
+
+  if (state === STATE.PITCHING) {
+    const elapsed = ts - pitchStart;
+    ballProgress = Math.min(1, elapsed / pitchDuration);
+
+    // Batter swing animation
+    if (batterSwing) {
+      batterSwingT += dt / 200;
+    }
+
+    drawScene();
+
+    if (ballProgress >= 1 && !swungDuringPitch) {
+      // Ball reached plate, player didn't swing
+      finishPitch(false);
+    }
+  } else if (state === STATE.IDLE) {
+    drawScene();
+    if (batterSwing) { batterSwingT += dt/200; if (batterSwingT > 1.5) { batterSwing = false; batterSwingT = 0; } }
+  }
+
+  if (flyBallAnim) {
+    flyBallAnim.progress += dt / 1400;
+    if (flyBallAnim.progress >= 1) flyBallAnim = null;
+    drawScene();
+  }
+
+  updateParticles();
+  requestAnimationFrame(loop);
+}
+
+// ─── Pitch logic ─────────────────────────────────────────────────
+function startPitch() {
+  if (state !== STATE.IDLE) return;
+  state = STATE.PITCHING;
+  isStrike = Math.random() < 0.72;
+  pitchType = Math.random() < 0.4 ? 'fast' : (Math.random() < 0.5 ? 'slow' : 'normal');
+  pitchDuration = pitchType === 'fast' ? 900 : (pitchType === 'slow' ? 1700 : 1250);
+  pitchStart = performance.now();
+  ballProgress = 0;
+  swungDuringPitch = false;
+  batterSwing = false;
+
+  document.getElementById('pitchBtn').style.display = 'none';
+  document.getElementById('swingBtn').style.display = 'block';
+  document.getElementById('swingBtn').classList.remove('disabled');
+  document.getElementById('timingWrap').style.display = 'block';
+  animateTimingBar();
+}
+
+let timingRAF = null;
+function animateTimingBar() {
+  cancelAnimationFrame(timingRAF);
+  const bar = document.getElementById('timingBar');
+  const marker = document.getElementById('timingMarker');
+  function tick() {
+    if (state !== STATE.PITCHING) return;
+    const pct = ballProgress * 100;
+    bar.style.width = pct + '%';
+    // Marker shows sweet spot zone
+    marker.style.left = '72%';
+    timingRAF = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function swing() {
+  if (state !== STATE.PITCHING || swungDuringPitch) return;
+  swungDuringPitch = true;
+  batterSwing = true; batterSwingT = 0;
+  document.getElementById('swingBtn').classList.add('disabled');
+  finishPitch(true);
+}
+
+function finishPitch(didSwing) {
+  state = STATE.RESULT;
+  cancelAnimationFrame(timingRAF);
+
+  document.getElementById('timingWrap').style.display = 'none';
+  document.getElementById('swingBtn').style.display = 'none';
+
+  const result = judgeResult(didSwing, ballProgress, isStrike);
+  showResult(result);
+
+  if (result.type === 'hit' || result.type === 'homerun' || result.type === 'fly') {
+    hitCount++;
+    document.getElementById('hitCount').textContent = hitCount;
+    launchFlyBall(result.type === 'homerun');
+  }
+
+  // Particles
+  const W = canvas.width, H = canvas.height;
+  const cx = W*0.5, cy = H*0.75;
+  if (result.type === 'homerun') spawnParticles(cx, cy, result.color, 80, 'homerun');
+  else if (result.type === 'hit') spawnParticles(cx, cy, result.color, 40, 'hit');
+  else if (result.type === 'miss' || result.type === 'strike') spawnParticles(cx, cy, '#8888aa', 15, 'miss');
+
+  setTimeout(() => {
+    state = STATE.IDLE;
+    document.getElementById('pitchBtn').style.display = 'block';
+    batterSwing = false; batterSwingT = 0;
+  }, 2200);
+}
+
+function launchFlyBall(homerun) {
+  const W = canvas.width, H = canvas.height;
+  flyBallAnim = {
+    x: W*0.5, y: H*0.75,
+    tx: homerun ? W*0.5 : W*(0.3 + Math.random()*0.4),
+    ty: homerun ? H*0.05 : H*(0.3 + Math.random()*0.2),
+    progress: 0
+  };
+}
+
+function showResult(result) {
+  const el = document.getElementById('result');
+  el.style.color = result.color;
+  el.innerHTML = result.text + (result.sub ? `<br><span style="font-size:28px;opacity:0.85">${result.sub}</span>` : '');
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  el.addEventListener('animationend', () => el.classList.remove('show'), { once:true });
+}
+
+// ─── Events ──────────────────────────────────────────────────────
+document.getElementById('pitchBtn').addEventListener('click', startPitch);
+document.getElementById('swingBtn').addEventListener('click', swing);
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
+    if (state === STATE.IDLE) startPitch();
+    else if (state === STATE.PITCHING) swing();
+  }
+});
+document.getElementById('homeBtn').addEventListener('click', () => { location.href='./index.html'; });
+
+// Start loop
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
