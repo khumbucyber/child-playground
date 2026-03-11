@@ -76,7 +76,7 @@ html, body { width:100%; height:100dvh; overflow:hidden; font-family:'Hiragino M
   text-align:center;
   backdrop-filter:blur(4px);
 }
-#scoreDisplay .big { font-size:22px; display:block; }
+#scoreDisplay .big { font-size:20px; display:block; }
 
 #readyMsg {
   position:fixed; top:28%; left:50%; transform:translate(-50%,-50%);
@@ -92,6 +92,39 @@ html, body { width:100%; height:100dvh; overflow:hidden; font-family:'Hiragino M
   position:fixed; top:0; left:0; width:100%; height:100dvh;
   pointer-events:none; z-index:15;
 }
+
+/* Game Over overlay */
+#gameOverlay {
+  position:fixed; top:0; left:0; width:100%; height:100dvh;
+  background:rgba(0,0,30,0.88);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:50; pointer-events:all;
+  opacity:0; transition:opacity 0.5s;
+  pointer-events:none;
+}
+#gameOverlay.show { opacity:1; pointer-events:all; }
+#gameOverlay h2 {
+  font-size:52px; font-weight:900; color:#ffdd00;
+  text-shadow:0 4px 16px rgba(0,0,0,0.6);
+  margin-bottom:32px; letter-spacing:2px;
+}
+.stat-row {
+  display:flex; align-items:center; gap:16px;
+  margin-bottom:16px;
+}
+.stat-label { font-size:22px; color:#aaddff; font-weight:700; }
+.stat-val   { font-size:40px; font-weight:900; color:white; min-width:70px; text-align:right; }
+.stat-unit  { font-size:18px; color:#88aacc; }
+#retryBtn {
+  margin-top:36px;
+  padding:18px 52px; border-radius:999px; border:none; outline:none;
+  font-family:inherit; font-weight:900; font-size:26px;
+  background:linear-gradient(145deg,#ff4d6d,#c9184a);
+  color:white; cursor:pointer;
+  box-shadow:0 6px 24px rgba(201,24,74,0.5), 0 4px 0 #7b0d29;
+  letter-spacing:2px;
+}
+#retryBtn:active { transform:scale(0.92); }
 </style>
 </head>
 <body>
@@ -105,16 +138,37 @@ html, body { width:100%; height:100dvh; overflow:hidden; font-family:'Hiragino M
 <button id="homeBtn">🏠 もどる</button>
 
 <div id="scoreDisplay">
-  <span class="big" id="hitCount">0</span>
-  ヒット
+  <span class="big" id="pitchDisplay">1/5</span>
+  きゅう
 </div>
 
 <div id="ui">
   <button id="swingBtn" class="disabled">🏏 ふる！</button>
 </div>
 
+<!-- Game Over overlay -->
+<div id="gameOverlay">
+  <h2>⚾ けっか！</h2>
+  <div class="stat-row">
+    <span class="stat-label">あんだすう</span>
+    <span class="stat-val" id="goHits">0</span>
+    <span class="stat-unit">ほん</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">ホームランすう</span>
+    <span class="stat-val" id="goHR">0</span>
+    <span class="stat-unit">ほん</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">だりつ</span>
+    <span class="stat-val" id="goAvg">.000</span>
+    <span class="stat-unit"></span>
+  </div>
+  <button id="retryBtn">もういちど！</button>
+</div>
+
 <script>
-// ─── Canvas setup ────────────────────────────────────────────────
+// ─── Canvas setup ─────────────────────────────────────────────────
 const canvas  = document.getElementById('gameCanvas');
 const ctx     = canvas.getContext('2d');
 const pCanvas = document.getElementById('particleCanvas');
@@ -127,30 +181,37 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// ─── State ───────────────────────────────────────────────────────
-const STATE = { IDLE:0, READY:1, PITCHING:2, RESULT:3 };
+// ─── State ────────────────────────────────────────────────────────
+const STATE = { IDLE:0, READY:1, PITCHING:2, RESULT:3, GAMEOVER:4 };
 let state         = STATE.IDLE;
-let stateAt       = 0;    // performance.now() when state entered
-let readyPhase    = 0;    // 0=initial msg, 1=pitch-type msg shown
-let readyPhase2At = 0;    // time when phase became 1
+let stateAt       = 0;
+let readyPhase    = 0;
+let readyPhase2At = 0;
+let currentTs     = 0;  // set each RAF frame — use instead of performance.now()
 
-let ballProgress  = -1;
-let pitchDuration = 1300;
-let isStrike      = true;
-let pitchOffsetX  = 0;
-let pitchType     = 'normal';
+// ─── Game stats ───────────────────────────────────────────────────
+const MAX_PITCHES = 5;
+let pitchCount    = 0;   // pitches thrown this game (1-5)
+let hitCountGame  = 0;   // single/fly hits (not homerun)
+let homerunCount  = 0;
+
+// ─── Pitch state ──────────────────────────────────────────────────
+let ballProgress     = -1;
+let pitchDuration    = 1300;
+let isStrike         = true;
+let pitchOffsetX     = 0;
+let pitchType        = 'normal';
 let swungDuringPitch = false;
-let particles     = [];
-let hitCount      = 0;
-let flyBallAnim   = null;
-let batterSwing   = false;
-let batterSwingT  = 0;
+let particles        = [];
+let flyBallAnim      = null;
+let batterSwing      = false;
+let batterSwingT     = 0;
 
-const swingBtn   = document.getElementById('swingBtn');
-const readyMsgEl = document.getElementById('readyMsg');
-const hitCountEl = document.getElementById('hitCount');
+const swingBtn    = document.getElementById('swingBtn');
+const readyMsgEl  = document.getElementById('readyMsg');
+const pitchDisplay = document.getElementById('pitchDisplay');
 
-// ─── Scene ───────────────────────────────────────────────────────
+// ─── Scene ────────────────────────────────────────────────────────
 function drawScene() {
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
@@ -161,6 +222,13 @@ function drawScene() {
   drawBatter(W, H);
   if (ballProgress >= 0 && state === STATE.PITCHING) drawBall(W, H);
   if (flyBallAnim) drawFlyBall(W, H);
+}
+
+// ── Geometry helpers ─────────────────────────────────────────────
+function getMoundY(W, H) {
+  const homeY   = H * 0.895;
+  const secondY = homeY - W * 0.40;
+  return secondY + (homeY - secondY) * 0.45;
 }
 
 // ── Field ─────────────────────────────────────────────────────────
@@ -221,10 +289,10 @@ function drawField(W, H) {
     ctx.fillRect(0, y0, W, y1 - y0);
   }
 
-  // Infield dirt (diamond shape following new foul lines)
-  const homeX = W * 0.5, homeY = H * 0.895;
-  const firstX = W * 0.70, firstY = homeY - W * 0.20;
-  const secondX = W * 0.5, secondY = homeY - W * 0.40;
+  // Infield dirt (diamond)
+  const homeX   = W * 0.5, homeY = H * 0.895;
+  const firstX  = W * 0.70, firstY  = homeY - W * 0.20;
+  const secondX = W * 0.5,  secondY = homeY - W * 0.40;
   const thirdX  = W * 0.30, thirdY  = homeY - W * 0.20;
 
   const dirtGrad = ctx.createLinearGradient(0, secondY, 0, homeY);
@@ -239,30 +307,26 @@ function drawField(W, H) {
   ctx.fill();
 
   // Pitcher's mound
+  const moundY = getMoundY(W, H);
   ctx.fillStyle = '#a06428';
   ctx.beginPath();
-  ctx.ellipse(W*0.5, secondY + (homeY - secondY)*0.45, W*0.032, (homeY - secondY)*0.055, 0, 0, Math.PI*2);
+  ctx.ellipse(W*0.5, moundY, W*0.038, (homeY - secondY)*0.048, 0, 0, Math.PI*2);
   ctx.fill();
 
   // Bases
-  // 2nd base (top of diamond)
   ctx.save(); ctx.translate(secondX, secondY);
   ctx.rotate(Math.PI/4);
   ctx.fillStyle = 'white'; ctx.fillRect(-6, -4, 12, 8); ctx.restore();
 
-  // 1st base (on right foul line)
   ctx.save(); ctx.translate(firstX, firstY);
   ctx.rotate(Math.PI/4);
   ctx.fillStyle = 'white'; ctx.fillRect(-7, -5, 14, 10); ctx.restore();
 
-  // 3rd base (on left foul line)
   ctx.save(); ctx.translate(thirdX, thirdY);
   ctx.rotate(Math.PI/4);
   ctx.fillStyle = 'white'; ctx.fillRect(-7, -5, 14, 10); ctx.restore();
 
-  // Foul lines — 90° opening: each line goes at 45° from vertical
-  // Left: from home toward top-left, clipped at x=0
-  // Right: from home toward top-right, clipped at x=W
+  // Foul lines
   const foulEndY = Math.max(0, homeY - W * 0.5);
   ctx.strokeStyle = 'rgba(255,255,255,0.60)';
   ctx.lineWidth = 2;
@@ -280,31 +344,25 @@ function drawField(W, H) {
   ctx.restore();
 }
 
-// ── Fielders ────────────────────────────────────────────────────
+// ── Fielders ──────────────────────────────────────────────────────
 function drawFielder(x, y, sz, uniform) {
-  // Head
   ctx.fillStyle = '#fdbcb4';
   ctx.beginPath();
   ctx.arc(x, y - sz * 0.80, sz * 0.18, 0, Math.PI * 2);
   ctx.fill();
-  // Cap
   ctx.fillStyle = uniform || '#cc2222';
   ctx.beginPath();
   ctx.arc(x, y - sz * 0.88, sz * 0.20, Math.PI, Math.PI * 2);
   ctx.fill();
-  // Cap brim
   ctx.fillRect(x - sz * 0.24, y - sz * 0.98, sz * 0.48, sz * 0.10);
-  // Body
   ctx.fillStyle = 'white';
   ctx.beginPath();
   ctx.ellipse(x, y - sz * 0.50, sz * 0.15, sz * 0.28, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Number stripe
   ctx.fillStyle = uniform || '#cc2222';
   ctx.beginPath();
   ctx.ellipse(x, y - sz * 0.50, sz * 0.15, sz * 0.28, 0, 0, Math.PI * 2);
   ctx.globalAlpha = 0.25; ctx.fill(); ctx.globalAlpha = 1;
-  // Legs
   ctx.strokeStyle = '#1a1a6e';
   ctx.lineWidth = Math.max(1, sz * 0.10);
   ctx.lineCap = 'round';
@@ -314,33 +372,33 @@ function drawFielder(x, y, sz, uniform) {
 
 function drawFielders(W, H) {
   const hY = H * 0.40;
-  const homeY = H * 0.895;
-  // Perspective scale: bigger when lower on screen (closer to camera)
   const sc = (y) => H * 0.020 + (y - hY) / (H - hY) * H * 0.052;
 
-  // Outfielders — near horizon, tiny
   const ofY = hY + (H - hY) * 0.11;
-  drawFielder(W * 0.17, ofY,                       sc(ofY),  '#cc2222'); // LF
-  drawFielder(W * 0.50, hY + (H - hY) * 0.05,      sc(hY+(H-hY)*0.05), '#cc2222'); // CF
-  drawFielder(W * 0.83, ofY,                       sc(ofY),  '#cc2222'); // RF
+  drawFielder(W * 0.17, ofY,                       sc(ofY),  '#cc2222');
+  drawFielder(W * 0.50, hY + (H - hY) * 0.05,      sc(hY+(H-hY)*0.05), '#cc2222');
+  drawFielder(W * 0.83, ofY,                       sc(ofY),  '#cc2222');
 
-  // Middle infielders
   const mifY = hY + (H - hY) * 0.38;
-  drawFielder(W * 0.34, mifY, sc(mifY), '#cc2222'); // SS
-  drawFielder(W * 0.66, mifY, sc(mifY), '#cc2222'); // 2B
+  drawFielder(W * 0.34, mifY, sc(mifY), '#cc2222');
+  drawFielder(W * 0.66, mifY, sc(mifY), '#cc2222');
 
-  // Corner infielders (near 1B / 3B)
-  const y1B = homeY - W * 0.20;
-  drawFielder(W * 0.74, y1B, sc(y1B), '#cc2222'); // 1B
-  drawFielder(W * 0.26, y1B, sc(y1B), '#cc2222'); // 3B
+  const homeY = H * 0.895;
+  const y1B   = homeY - W * 0.20;
+  drawFielder(W * 0.74, y1B, sc(y1B), '#cc2222');
+  drawFielder(W * 0.26, y1B, sc(y1B), '#cc2222');
 }
 
-// ── Strike zone ──────────────────────────────────────────────────
+// ── Strike zone ───────────────────────────────────────────────────
 function drawStrikeZone(W, H) {
+  // positioned near the ball's arrival area so it feels aligned
+  const moundY   = getMoundY(W, H);
+  const homeY    = H * 0.895;
+  const arrivalY = moundY + (homeY - moundY) * 0.65;
   const zW = W * 0.19;
-  const zH = H * 0.19;
+  const zH = H * 0.065;
   const zX = W * 0.5 - zW / 2;
-  const zY = H * 0.50 - zH / 2;
+  const zY = arrivalY - zH * 1.2;
 
   ctx.shadowColor = 'rgba(255,255,80,0.5)';
   ctx.shadowBlur = 8;
@@ -357,21 +415,32 @@ function drawStrikeZone(W, H) {
   ctx.fillText('ストライク', W*0.5, zY - 7);
 }
 
-// ── Pitcher ──────────────────────────────────────────────────────
+// ── Pitcher ───────────────────────────────────────────────────────
 function drawPitcher(W, H) {
-  const hY = H * 0.40;
-  const px = W * 0.5;
-  const py = hY + (H - hY) * 0.12;
-  const s  = W * 0.022;
+  const hY     = H * 0.40;
+  const moundY = getMoundY(W, H);
+  const px     = W * 0.5;
+  const py     = moundY;
+
+  // Perspective-correct size (same formula as fielders)
+  const s = H * 0.020 + (py - hY) / (H - hY) * H * 0.052;
+
   const wind = (state === STATE.PITCHING && ballProgress < 0.18) ? ballProgress / 0.18 : 0;
 
+  // Body
   ctx.fillStyle = '#cc2222';
   ctx.beginPath(); ctx.ellipse(px, py, s*0.45, s*0.62, 0, 0, Math.PI*2); ctx.fill();
+
+  // Head
   ctx.fillStyle = '#fdbcb4';
   ctx.beginPath(); ctx.arc(px, py - s*0.82, s*0.35, 0, Math.PI*2); ctx.fill();
+
+  // Helmet
   ctx.fillStyle = '#1a1a6e';
   ctx.beginPath(); ctx.arc(px, py - s*0.95, s*0.36, Math.PI, Math.PI*2); ctx.fill();
   ctx.fillRect(px - s*0.48, py - s*1.04, s*0.96, s*0.12);
+
+  // Pitching arm
   ctx.strokeStyle = '#fdbcb4'; ctx.lineWidth = s*0.3; ctx.lineCap = 'round';
   const armAngle = -Math.PI/2 - wind * Math.PI * 0.9;
   ctx.beginPath();
@@ -380,21 +449,23 @@ function drawPitcher(W, H) {
   ctx.stroke();
 }
 
-// ── Ball ─────────────────────────────────────────────────────────
+// ── Ball ──────────────────────────────────────────────────────────
 function drawBall(W, H) {
-  const hY = H * 0.40;
-  const pitcherY = hY + (H - hY) * 0.12;
-  const arrivalY = H * 0.68;
-  const p  = ballProgress;
+  const moundY   = getMoundY(W, H);
+  const homeY    = H * 0.895;
+  // Ball travels from just above pitcher's hand to near home plate
+  const pitcherY = moundY - (homeY - moundY) * 0.22;  // release point above mound
+  const arrivalY = moundY + (homeY - moundY) * 0.65;  // arrival near home plate area
+  const p = ballProgress;
 
   const bx = W * 0.5 + pitchOffsetX * p * p;
   const by = pitcherY + (arrivalY - pitcherY) * p;
-  const br = 3 + p * p * 20;
+  const br = 4 + p * p * 16;
 
-  const gndY = hY + (H * 0.84 - hY) * p;
+  // Ground shadow (travels from mound toward home plate)
   ctx.fillStyle = 'rgba(0,0,0,0.22)';
   ctx.beginPath();
-  ctx.ellipse(W*0.5 + pitchOffsetX*p*p, gndY, br*1.6, br*0.38, 0, 0, Math.PI*2);
+  ctx.ellipse(W*0.5 + pitchOffsetX*p*p, moundY + (homeY - moundY) * 0.72 * p, br*1.6, br*0.38, 0, 0, Math.PI*2);
   ctx.fill();
 
   const bg = ctx.createRadialGradient(bx - br*0.32, by - br*0.32, br*0.08, bx, by, br);
@@ -408,7 +479,7 @@ function drawBall(W, H) {
   ctx.beginPath(); ctx.arc(bx + br*0.28, by, br*0.68, Math.PI-0.55, Math.PI+0.55); ctx.stroke();
 }
 
-// ── Batter ───────────────────────────────────────────────────────
+// ── Batter ────────────────────────────────────────────────────────
 function drawBatter(W, H) {
   const bx   = W * 0.80;
   const feet = H * 0.86;
@@ -436,16 +507,16 @@ function drawBatter(W, H) {
   ctx.fillRect(bx - s*0.34, feet - s*1.08, s*0.35, s*0.08);
   ctx.beginPath(); ctx.arc(bx - s*0.03, feet - s*0.92, s*0.08, 0, Math.PI*2); ctx.fill();
 
-  // Bat angles
-  const restAngle    = -Math.PI * 0.28;
-  const contactAngle =  Math.PI * 0.18;
-  const followAngle  =  Math.PI * 0.68;
+  // Bat angles — rest upper-right (held back), contact when barrel passes over home plate, follow-through upper-left
+  const restAngle    =  Math.PI * 0.32;   // bat held back upper-right
+  const contactAngle = -Math.PI * 0.27;   // barrel over home plate (left side)
+  const followAngle  = -Math.PI * 0.65;   // follow-through upper-left
 
   let batAngle;
-  if (sw < 0.55) {
-    batAngle = restAngle + (contactAngle - restAngle) * (sw / 0.55);
+  if (sw < 0.52) {
+    batAngle = restAngle + (contactAngle - restAngle) * (sw / 0.52);
   } else {
-    batAngle = contactAngle + (followAngle - contactAngle) * ((sw - 0.55) / 0.45);
+    batAngle = contactAngle + (followAngle - contactAngle) * ((sw - 0.52) / 0.48);
   }
 
   const batLen = s * 0.90;
@@ -453,11 +524,11 @@ function drawBatter(W, H) {
   const gripY  = feet - s * 0.70;
 
   // Motion trail
-  if (sw > 0.05 && sw < 0.6) {
+  if (sw > 0.05 && sw < 0.65) {
     for (let m = 1; m <= 4; m++) {
       ctx.save();
       ctx.translate(gripX, gripY);
-      const trailAngle = batAngle - m * 0.18;
+      const trailAngle = batAngle + m * 0.18;  // trail lags behind swing direction
       ctx.rotate(trailAngle);
       ctx.globalAlpha = 0.07;
       ctx.fillStyle = '#8B4513';
@@ -471,43 +542,36 @@ function drawBatter(W, H) {
     }
   }
 
-  // Bat body — narrow handle, wide barrel
+  // Bat body
   ctx.save();
   ctx.translate(gripX, gripY);
   ctx.rotate(batAngle);
 
-  const handleW = s * 0.030;  // handle half-width (narrow)
-  const throatW = s * 0.022;  // thinnest point
-  const barrelW = s * 0.100;  // barrel half-width (wide)
+  const handleW = s * 0.030;
+  const throatW = s * 0.022;
+  const barrelW = s * 0.100;
 
-  // Main bat shape with bezier curves
   ctx.fillStyle = '#8B4513';
   ctx.beginPath();
-  // Left side going upward
   ctx.moveTo(-handleW, 0);
-  ctx.bezierCurveTo(-handleW, -batLen*0.22,  -throatW, -batLen*0.28,  -throatW, -batLen*0.38);
-  ctx.bezierCurveTo(-throatW, -batLen*0.52,  -barrelW, -batLen*0.68,  -barrelW, -batLen*0.80);
+  ctx.bezierCurveTo(-handleW, -batLen*0.22, -throatW, -batLen*0.28, -throatW, -batLen*0.38);
+  ctx.bezierCurveTo(-throatW, -batLen*0.52, -barrelW, -batLen*0.68, -barrelW, -batLen*0.80);
   ctx.lineTo(-barrelW, -batLen);
-  // Barrel cap
   ctx.lineTo( barrelW, -batLen);
-  // Right side going downward
   ctx.lineTo( barrelW, -batLen*0.80);
-  ctx.bezierCurveTo( barrelW, -batLen*0.68,   throatW, -batLen*0.52,   throatW, -batLen*0.38);
-  ctx.bezierCurveTo( throatW, -batLen*0.28,   handleW, -batLen*0.22,   handleW, 0);
+  ctx.bezierCurveTo( barrelW, -batLen*0.68,  throatW, -batLen*0.52,  throatW, -batLen*0.38);
+  ctx.bezierCurveTo( throatW, -batLen*0.28,  handleW, -batLen*0.22,  handleW, 0);
   ctx.closePath();
   ctx.fill();
 
-  // Grip tape
   ctx.fillStyle = '#3a1800';
   ctx.fillRect(-handleW, -s*0.10, handleW*2, s*0.10);
 
-  // Barrel highlight
   ctx.fillStyle = 'rgba(255,220,180,0.35)';
   ctx.beginPath();
   ctx.ellipse(-barrelW*0.3, -batLen*0.90, barrelW*0.28, batLen*0.06, 0, 0, Math.PI*2);
   ctx.fill();
 
-  // Barrel end cap (knob)
   ctx.fillStyle = '#a0522d';
   ctx.beginPath();
   ctx.ellipse(0, -batLen, barrelW, barrelW*0.38, 0, 0, Math.PI*2);
@@ -515,22 +579,23 @@ function drawBatter(W, H) {
 
   ctx.restore();
 
-  // Whoosh arc
+  // Whoosh arc (swings from right to left)
   if (sw > 0.1 && sw < 0.75) {
     ctx.save();
     ctx.translate(gripX, gripY - batLen * 0.85);
     ctx.strokeStyle = 'rgba(200,230,255,0.45)';
     ctx.lineWidth = 3;
+    // arc from restAngle side to current batAngle (going counterclockwise = swinging left)
     const startA = restAngle - Math.PI/2;
     const endA   = batAngle  - Math.PI/2;
     ctx.beginPath();
-    ctx.arc(0, 0, batLen * 0.82, startA, endA);
+    ctx.arc(0, 0, batLen * 0.82, endA, startA);  // clockwise from end to start (arc behind bat)
     ctx.stroke();
     ctx.restore();
   }
 }
 
-// ── Fly ball ─────────────────────────────────────────────────────
+// ── Fly ball ──────────────────────────────────────────────────────
 function drawFlyBall(W, H) {
   if (!flyBallAnim) return;
   const p  = flyBallAnim.progress;
@@ -545,9 +610,10 @@ function drawFlyBall(W, H) {
   ctx.beginPath(); ctx.arc(bx + r*0.28, by, r*0.66, Math.PI-0.5, Math.PI+0.5); ctx.stroke();
 }
 
-// ─── Timing judgment ─────────────────────────────────────────────
+// ─── Timing judgment ──────────────────────────────────────────────
+// "Good" contact = ball has traveled ~84% of the way (near batter, barrel over home plate)
 function getTimingScore(progress) {
-  const center     = 0.88;
+  const center     = 0.84;
   const halfWindow = 0.13;
   const dist = Math.abs(progress - center);
   if (dist > halfWindow * 2.4) return 0;
@@ -562,7 +628,7 @@ function judgeResult(didSwing, progress, strikeZone) {
   }
   const score = getTimingScore(progress);
   if (score >= 0.84) {
-    return { text:'ホームラン！！', sub:'🎆 かんぺき！',   color:'#ff4400', type:'homerun' };
+    return { text:'ホームラン！！', sub:'🎆 かんぺき！', color:'#ff4400', type:'homerun' };
   } else if (score >= 0.52) {
     return Math.random() < 0.55
       ? { text:'ヒット！',  sub:'⚾ うまい！',   color:'#ffdd00', type:'hit' }
@@ -574,7 +640,7 @@ function judgeResult(didSwing, progress, strikeZone) {
   }
 }
 
-// ─── Particles ───────────────────────────────────────────────────
+// ─── Particles ────────────────────────────────────────────────────
 function spawnParticles(x, y, color, count, type) {
   for (let i = 0; i < count; i++) {
     const a = Math.random() * Math.PI * 2;
@@ -606,16 +672,16 @@ function updateParticles() {
 
 // ─── State transitions ────────────────────────────────────────────
 function enterIdle(now) {
-  state = STATE.IDLE;
-  stateAt = now;
+  state        = STATE.IDLE;
+  stateAt      = now;
   batterSwing  = false;
   batterSwingT = 0;
   swingBtn.classList.add('disabled');
 }
 
 function enterReady(now) {
-  state = STATE.READY;
-  stateAt = now;
+  state         = STATE.READY;
+  stateAt       = now;
   readyPhase    = 0;
   readyPhase2At = 0;
   swingBtn.classList.add('disabled');
@@ -647,34 +713,45 @@ function enterPitching(now) {
   swungDuringPitch = false;
   batterSwing      = false;
   batterSwingT     = 0;
+  flyBallAnim      = null;  // clear any lingering fly ball
   readyMsgEl.classList.remove('show');
   swingBtn.classList.remove('disabled');
+  pitchCount++;
+  updatePitchDisplay();
+}
+
+function updatePitchDisplay() {
+  pitchDisplay.textContent = `${Math.min(pitchCount, MAX_PITCHES)}/${MAX_PITCHES}`;
 }
 
 function finishPitch(didSwing, progress) {
   state        = STATE.RESULT;
-  stateAt      = performance.now();
+  stateAt      = currentTs;  // ← always use RAF timestamp, never performance.now()
   ballProgress = -1;
 
   const result = judgeResult(didSwing, progress, isStrike);
   showResult(result);
 
-  if (result.type === 'hit' || result.type === 'homerun' || result.type === 'fly') {
-    hitCount++;
-    hitCountEl.textContent = hitCount;
-    launchFlyBall(result.type === 'homerun');
+  if (result.type === 'hit') {
+    hitCountGame++;
+    launchFlyBall(false);
+  } else if (result.type === 'homerun') {
+    homerunCount++;
+    launchFlyBall(true);
+  } else if (result.type === 'fly') {
+    launchFlyBall(false);
   }
 
   const W = canvas.width, H = canvas.height;
   const cx = W * 0.5, cy = H * 0.58;
-  if (result.type === 'homerun')                              spawnParticles(cx, cy, result.color, 80, 'homerun');
-  else if (result.type === 'hit' || result.type === 'fly')    spawnParticles(cx, cy, result.color, 40, 'hit');
+  if (result.type === 'homerun')                               spawnParticles(cx, cy, result.color, 80, 'homerun');
+  else if (result.type === 'hit' || result.type === 'fly')     spawnParticles(cx, cy, result.color, 40, 'hit');
   else if (result.type === 'miss' || result.type === 'strike') spawnParticles(cx, cy, '#8888aa', 18, 'miss');
 }
 
 function swing() {
   if (state !== STATE.PITCHING || swungDuringPitch) return;
-  const captured = ballProgress;
+  const captured   = ballProgress;
   swungDuringPitch = true;
   batterSwing      = true;
   batterSwingT     = 0;
@@ -703,10 +780,44 @@ function launchFlyBall(homerun) {
   };
 }
 
-// ─── Game loop (all timing driven by rAF timestamps) ──────────────
+// ─── Game Over ────────────────────────────────────────────────────
+function enterGameOver(now) {
+  state   = STATE.GAMEOVER;
+  stateAt = now;
+  swingBtn.classList.add('disabled');
+  readyMsgEl.classList.remove('show');
+
+  // Compute batting average: (hits + homeruns) / MAX_PITCHES
+  const totalHits = hitCountGame + homerunCount;
+  const avg = totalHits / MAX_PITCHES;
+  const avgStr = avg === 0 ? '.000'
+    : '.' + String(Math.round(avg * 1000)).padStart(3, '0');
+
+  document.getElementById('goHits').textContent = hitCountGame;
+  document.getElementById('goHR').textContent   = homerunCount;
+  document.getElementById('goAvg').textContent  = avgStr;
+
+  document.getElementById('gameOverlay').classList.add('show');
+}
+
+function resetGame(now) {
+  pitchCount   = 0;
+  hitCountGame = 0;
+  homerunCount = 0;
+  particles    = [];
+  flyBallAnim  = null;
+  batterSwing  = false;
+  batterSwingT = 0;
+  document.getElementById('gameOverlay').classList.remove('show');
+  updatePitchDisplay();
+  enterIdle(now);
+}
+
+// ─── Game loop ────────────────────────────────────────────────────
 let lastTs = 0;
 
 function loop(ts) {
+  currentTs = ts;  // ← store every frame so finishPitch can use it
   if (lastTs === 0) lastTs = ts;
   const dt = Math.min(ts - lastTs, 50);
   lastTs = ts;
@@ -714,7 +825,6 @@ function loop(ts) {
   const elapsed = ts - stateAt;
 
   if (state === STATE.IDLE) {
-    // Auto-start next pitch after short pause
     if (elapsed > 700) enterReady(ts);
 
   } else if (state === STATE.READY) {
@@ -739,11 +849,20 @@ function loop(ts) {
       batterSwingT += dt / 145;
       if (batterSwingT > 1.8) { batterSwing = false; batterSwingT = 0; }
     }
-    if (elapsed > 2100) enterIdle(ts);
+    // Wait for result display + fly ball to finish before moving on
+    const resultDelay = flyBallAnim ? 2600 : 2100;
+    if (elapsed > resultDelay) {
+      if (pitchCount >= MAX_PITCHES) {
+        enterGameOver(ts);
+      } else {
+        enterIdle(ts);
+      }
+    }
   }
+  // GAMEOVER: no auto-transitions; wait for retry button
 
   if (flyBallAnim) {
-    flyBallAnim.progress += dt / 1500;
+    flyBallAnim.progress += dt / 1800;
     if (flyBallAnim.progress >= 1) flyBallAnim = null;
   }
 
@@ -752,7 +871,7 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
-// ─── Events ──────────────────────────────────────────────────────
+// ─── Events ───────────────────────────────────────────────────────
 swingBtn.addEventListener('click', swing);
 document.addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'Enter') {
@@ -761,8 +880,10 @@ document.addEventListener('keydown', e => {
   }
 });
 document.getElementById('homeBtn').addEventListener('click', () => { location.href = './index.html'; });
+document.getElementById('retryBtn').addEventListener('click', () => resetGame(currentTs));
 
 // ─── Boot ─────────────────────────────────────────────────────────
+updatePitchDisplay();
 stateAt = performance.now();
 requestAnimationFrame(loop);
 </script>
