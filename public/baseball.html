@@ -659,10 +659,15 @@ function spawnParticles(x, y, color, count, type) {
 
 function updateParticles() {
   pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-  particles = particles.filter(p => p.life > 0);
+  // 先に全パーティクルを更新してから dead を除去する。
+  // filter を先にすると「life がほぼ 0 の粒子」が filter を通過した後 decay で
+  // マイナスになり、arc() にマイナス半径を渡して例外 → rAF ループ停止する。
   particles.forEach(p => {
     p.x += p.vx; p.y += p.vy; p.vy += 0.38; p.life -= p.decay;
-    pCtx.globalAlpha = Math.max(0, p.life);
+  });
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    pCtx.globalAlpha = p.life;
     pCtx.fillStyle = p.color;
     pCtx.beginPath(); pCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2); pCtx.fill();
   });
