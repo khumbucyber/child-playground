@@ -183,11 +183,10 @@ window.addEventListener('resize', resize);
 
 // ─── State ────────────────────────────────────────────────────────
 const STATE = { IDLE:0, READY:1, PITCHING:2, RESULT:3, GAMEOVER:4 };
-let state         = STATE.IDLE;
-let stateAt       = 0;
-let readyPhase    = 0;
-let readyPhase2At = 0;
-let currentTs     = 0;  // set each RAF frame — use instead of performance.now()
+let state          = STATE.IDLE;
+let stateTimer     = 0;  // ms elapsed in current state; reset to 0 on each transition
+let readyPhase     = 0;
+let readyPhase2Timer = 0;  // ms elapsed since readyPhase became 1
 
 // ─── Game stats ───────────────────────────────────────────────────
 const MAX_PITCHES = 5;
@@ -671,19 +670,19 @@ function updateParticles() {
 }
 
 // ─── State transitions ────────────────────────────────────────────
-function enterIdle(now) {
+function enterIdle() {
   state        = STATE.IDLE;
-  stateAt      = now;
+  stateTimer   = 0;
   batterSwing  = false;
   batterSwingT = 0;
   swingBtn.classList.add('disabled');
 }
 
-function enterReady(now) {
-  state         = STATE.READY;
-  stateAt       = now;
-  readyPhase    = 0;
-  readyPhase2At = 0;
+function enterReady() {
+  state            = STATE.READY;
+  stateTimer       = 0;
+  readyPhase       = 0;
+  readyPhase2Timer = 0;
   swingBtn.classList.add('disabled');
   readyMsgEl.textContent = '⚾ じゅんびして！';
   readyMsgEl.classList.add('show');
@@ -706,9 +705,9 @@ function setupPitch() {
   readyMsgEl.textContent = label;
 }
 
-function enterPitching(now) {
+function enterPitching() {
   state            = STATE.PITCHING;
-  stateAt          = now;
+  stateTimer       = 0;
   ballProgress     = 0;
   swungDuringPitch = false;
   batterSwing      = false;
@@ -726,7 +725,7 @@ function updatePitchDisplay() {
 
 function finishPitch(didSwing, progress) {
   state        = STATE.RESULT;
-  stateAt      = currentTs;  // ← always use RAF timestamp, never performance.now()
+  stateTimer   = 0;
   ballProgress = -1;
 
   const result = judgeResult(didSwing, progress, isStrike);
@@ -781,9 +780,9 @@ function launchFlyBall(homerun) {
 }
 
 // ─── Game Over ────────────────────────────────────────────────────
-function enterGameOver(now) {
-  state   = STATE.GAMEOVER;
-  stateAt = now;
+function enterGameOver() {
+  state      = STATE.GAMEOVER;
+  stateTimer = 0;
   swingBtn.classList.add('disabled');
   readyMsgEl.classList.remove('show');
 
@@ -800,7 +799,7 @@ function enterGameOver(now) {
   document.getElementById('gameOverlay').classList.add('show');
 }
 
-function resetGame(now) {
+function resetGame() {
   pitchCount   = 0;
   hitCountGame = 0;
   homerunCount = 0;
@@ -810,35 +809,36 @@ function resetGame(now) {
   batterSwingT = 0;
   document.getElementById('gameOverlay').classList.remove('show');
   updatePitchDisplay();
-  enterIdle(now);
+  enterIdle();
 }
 
 // ─── Game loop ────────────────────────────────────────────────────
 let lastTs = 0;
 
 function loop(ts) {
-  currentTs = ts;  // ← store every frame so finishPitch can use it
   if (lastTs === 0) lastTs = ts;
   const dt = Math.min(ts - lastTs, 50);
   lastTs = ts;
 
-  const elapsed = ts - stateAt;
+  // stateTimer accumulates dt — never negative, immune to timestamp drift
+  stateTimer += dt;
 
   if (state === STATE.IDLE) {
-    if (elapsed > 700) enterReady(ts);
+    if (stateTimer > 700) enterReady();
 
   } else if (state === STATE.READY) {
-    if (readyPhase === 0 && elapsed > 1050) {
-      readyPhase    = 1;
-      readyPhase2At = ts;
+    if (readyPhase === 0 && stateTimer > 1050) {
+      readyPhase       = 1;
+      readyPhase2Timer = 0;
       setupPitch();
     }
-    if (readyPhase === 1 && ts - readyPhase2At > 950) {
-      enterPitching(ts);
+    if (readyPhase === 1) {
+      readyPhase2Timer += dt;
+      if (readyPhase2Timer > 950) enterPitching();
     }
 
   } else if (state === STATE.PITCHING) {
-    ballProgress = Math.min(1, elapsed / pitchDuration);
+    ballProgress = Math.min(1, stateTimer / pitchDuration);
     if (batterSwing) batterSwingT += dt / 145;
     if (ballProgress >= 1 && !swungDuringPitch) {
       finishPitch(false, 1.0);
@@ -849,13 +849,11 @@ function loop(ts) {
       batterSwingT += dt / 145;
       if (batterSwingT > 1.8) { batterSwing = false; batterSwingT = 0; }
     }
-    // Wait for result display + fly ball to finish before moving on
-    const resultDelay = flyBallAnim ? 2600 : 2100;
-    if (elapsed > resultDelay) {
+    if (stateTimer > 2200) {
       if (pitchCount >= MAX_PITCHES) {
-        enterGameOver(ts);
+        enterGameOver();
       } else {
-        enterIdle(ts);
+        enterIdle();
       }
     }
   }
@@ -880,11 +878,10 @@ document.addEventListener('keydown', e => {
   }
 });
 document.getElementById('homeBtn').addEventListener('click', () => { location.href = './index.html'; });
-document.getElementById('retryBtn').addEventListener('click', () => resetGame(currentTs));
+document.getElementById('retryBtn').addEventListener('click', () => resetGame());
 
 // ─── Boot ─────────────────────────────────────────────────────────
 updatePitchDisplay();
-stateAt = performance.now();
 requestAnimationFrame(loop);
 </script>
 </body>
