@@ -727,6 +727,7 @@ function finishPitch(didSwing, progress) {
   state        = STATE.RESULT;
   stateTimer   = 0;
   ballProgress = -1;
+  swingBtn.classList.add('disabled');  // 常にボタン無効化（スイングなし時の取り残し防止）
 
   const result = judgeResult(didSwing, progress, isStrike);
   showResult(result);
@@ -824,17 +825,17 @@ function loop(ts) {
   stateTimer += dt;
 
   if (state === STATE.IDLE) {
-    if (stateTimer > 700) enterReady();
+    if (stateTimer > 400) enterReady();
 
   } else if (state === STATE.READY) {
-    if (readyPhase === 0 && stateTimer > 1050) {
+    if (readyPhase === 0 && stateTimer > 700) {
       readyPhase       = 1;
       readyPhase2Timer = 0;
       setupPitch();
     }
     if (readyPhase === 1) {
       readyPhase2Timer += dt;
-      if (readyPhase2Timer > 950) enterPitching();
+      if (readyPhase2Timer > 650) enterPitching();
     }
 
   } else if (state === STATE.PITCHING) {
