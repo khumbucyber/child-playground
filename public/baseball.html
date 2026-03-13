@@ -526,10 +526,10 @@ function drawBatter(W, H) {
   ctx.fillRect(bx - s*0.34, feet - s*1.08, s*0.35, s*0.08);
   ctx.beginPath(); ctx.arc(bx - s*0.03, feet - s*0.92, s*0.08, 0, Math.PI*2); ctx.fill();
 
-  // Bat angles — rest upper-right (held back), contact when barrel passes over home plate, follow-through upper-left
+  // Bat angles — rest upper-right (held back), contact aligned with ball position, follow-through right-horizontal (far side)
   const restAngle    =  Math.PI * 0.32;   // bat held back upper-right
-  const contactAngle = -Math.PI * 0.27;   // barrel over home plate (left side)
-  const followAngle  = -Math.PI * 0.52;   // follow-through: horizontal, far side of body
+  const contactAngle = -Math.PI * 0.72;   // barrel at ball position (lower-left, aligns with pitch at p=0.84)
+  const followAngle  = -Math.PI * 1.50;   // follow-through: barrel pointing right-horizontal = far side of body
 
   let batAngle;
   if (sw < 0.52) {
@@ -543,7 +543,7 @@ function drawBatter(W, H) {
   const gripY  = feet - s * 0.70;
 
   // Motion trail
-  if (sw > 0.05 && sw < 0.65) {
+  if (sw > 0.05 && sw < 0.90) {
     for (let m = 1; m <= 4; m++) {
       ctx.save();
       ctx.translate(gripX, gripY);
@@ -599,7 +599,7 @@ function drawBatter(W, H) {
   ctx.restore();
 
   // Whoosh arc (swings from right to left)
-  if (sw > 0.1 && sw < 0.75) {
+  if (sw > 0.1 && sw < 0.92) {
     ctx.save();
     ctx.translate(gripX, gripY - batLen * 0.85);
     ctx.strokeStyle = 'rgba(200,230,255,0.45)';
@@ -865,14 +865,14 @@ function loop(ts) {
 
   } else if (state === STATE.PITCHING) {
     ballProgress = Math.min(1, stateTimer / pitchDuration);
-    if (batterSwing) batterSwingT += dt / 145;
+    if (batterSwing) batterSwingT += dt / 200;
     if (ballProgress >= 1 && !swungDuringPitch) {
       finishPitch(false, 1.0);
     }
 
   } else if (state === STATE.RESULT) {
     if (batterSwing) {
-      batterSwingT = Math.min(1, batterSwingT + dt / 145);
+      batterSwingT = Math.min(1, batterSwingT + dt / 200);
     }
     if (stateTimer > 2200) {
       if (pitchCount >= MAX_PITCHES) {
