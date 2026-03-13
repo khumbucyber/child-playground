@@ -528,7 +528,10 @@ html, body {
     <br>
     おなじものでも、<br>
     もんだいによって こたえが<br>
-    かわることが あるよ…🤔
+    かわることが あるよ…🤔<br>
+    <br>
+    まいかい ちがう もんだいが<br>
+    でるよ！なんどでも あそんでね🎲
   </div>
 
   <div class="stage-dots-preview">
@@ -610,28 +613,31 @@ html, body {
           <span class="domain-tag">うごくもの</span>
           <span class="domain-tag">たべもの</span>
           <span class="domain-tag">いきもの</span>
+          <span class="domain-tag">うみにいるもの</span>
         </div>
       </div>
     </div>
 
     <div class="domain-card">
-      <div class="domain-emoji-big">🍎</div>
+      <div class="domain-emoji-big">🍅</div>
       <div class="domain-info">
-        <div class="domain-item-name">りんご は…</div>
+        <div class="domain-item-name">トマト は…</div>
         <div class="domain-tags">
           <span class="domain-tag">たべもの</span>
-          <span class="domain-tag">まるいもの</span>
+          <span class="domain-tag">やさい</span>
+          <span class="domain-tag">あかいもの</span>
         </div>
       </div>
     </div>
 
     <div class="domain-card">
-      <div class="domain-emoji-big">🚂</div>
+      <div class="domain-emoji-big">✈️</div>
       <div class="domain-info">
-        <div class="domain-item-name">でんしゃ は…</div>
+        <div class="domain-item-name">ひこうき は…</div>
         <div class="domain-tags">
-          <span class="domain-tag">うごくもの</span>
           <span class="domain-tag">のりもの</span>
+          <span class="domain-tag">うごくもの</span>
+          <span class="domain-tag">そらをとぶもの</span>
         </div>
       </div>
     </div>
@@ -659,84 +665,286 @@ html, body {
 
 <script>
 // ════════════════════════════════════════
-// STAGE DATA
+// STAGE POOL（ランダムに5問選ぶ）
 // ════════════════════════════════════════
-const STAGES = [
+const STAGE_POOL = [
+  // ── 1. うごくもの ──
   {
     question: ['うごくもの', 'を えらんでね！'],
     items: [
-      { emoji:'🐶', name:'いぬ',    correct:true  },
-      { emoji:'🚗', name:'くるま',  correct:true  },
-      { emoji:'🍎', name:'りんご',  correct:false },
-      { emoji:'🐟', name:'さかな',  correct:true  },
-      { emoji:'📚', name:'ほん',    correct:false },
-      { emoji:'🚂', name:'でんしゃ',correct:true  },
-      { emoji:'🍌', name:'バナナ',  correct:false },
-      { emoji:'⚽', name:'ボール',  correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:true  },
+      { emoji:'🚗', name:'くるま',    correct:true  },
+      { emoji:'🐟', name:'さかな',    correct:true  },
+      { emoji:'🚂', name:'でんしゃ',  correct:true  },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+      { emoji:'🏠', name:'いえ',      correct:false },
+      { emoji:'⚽', name:'ボール',    correct:false },
     ],
-    hint: '🐟 さかなは じぶんで およいで うごくよ！\nうごくものに はいるんだね。',
+    hint: '⚽ ボールは じぶんでは うごかないよ！\nけると うごくけど、それは べつの はなしだね。\n🐟 さかな・🐶 いぬ・🚗 くるまは じぶんで うごくよ！',
   },
+  // ── 2. たべもの ──
   {
     question: ['たべもの', 'を えらんでね！'],
     items: [
-      { emoji:'🍎', name:'りんご',  correct:true  },
-      { emoji:'🚗', name:'くるま',  correct:false },
-      { emoji:'🐟', name:'さかな',  correct:true  },
-      { emoji:'🍌', name:'バナナ',  correct:true  },
-      { emoji:'📚', name:'ほん',    correct:false },
-      { emoji:'🚂', name:'でんしゃ',correct:false },
-      { emoji:'🐶', name:'いぬ',    correct:false },
-      { emoji:'🍊', name:'みかん',  correct:true  },
+      { emoji:'🍎', name:'りんご',    correct:true  },
+      { emoji:'🍌', name:'バナナ',    correct:true  },
+      { emoji:'🍊', name:'みかん',    correct:true  },
+      { emoji:'🥕', name:'にんじん',  correct:true  },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'⚽', name:'ボール',    correct:false },
     ],
-    hint: '🐟 さかな、さっきは うごくものだったね。\nたべものでも あるんだ！ふしぎ？いや、ほんとうのこと！',
+    hint: '🥕 にんじんは やさいだけど たべものだよ！\nやさいも たべものの なかまなんだ！',
   },
-  {
-    question: ['まるいもの', 'を えらんでね！'],
-    items: [
-      { emoji:'⚽', name:'ボール',  correct:true  },
-      { emoji:'🍎', name:'りんご',  correct:true  },
-      { emoji:'🍌', name:'バナナ',  correct:false },
-      { emoji:'☀️', name:'たいよう',correct:true  },
-      { emoji:'🚗', name:'くるま',  correct:false },
-      { emoji:'🌙', name:'つき',    correct:true  },
-      { emoji:'🍊', name:'みかん',  correct:true  },
-      { emoji:'📚', name:'ほん',    correct:false },
-    ],
-    hint: '🍎 りんご、さっきは たべものだったね。\nまるいものでも あるよ！\nおなじものが いくつかの なかまに はいれるんだ！',
-  },
-  {
-    question: ['いきもの', 'を えらんでね！'],
-    items: [
-      { emoji:'🐶', name:'いぬ',    correct:true  },
-      { emoji:'🐟', name:'さかな',  correct:true  },
-      { emoji:'🍎', name:'りんご',  correct:false },
-      { emoji:'🚂', name:'でんしゃ',correct:false },
-      { emoji:'🦋', name:'ちょうちょ',correct:true },
-      { emoji:'🍌', name:'バナナ',  correct:false },
-      { emoji:'⚽', name:'ボール',  correct:false },
-      { emoji:'🐱', name:'ねこ',    correct:true  },
-    ],
-    hint: '🐟 さかなは\n「うごくもの」「たべもの」「いきもの」\nぜんぶに はいるよ！すごいね！',
-  },
+  // ── 3. のりもの ──
   {
     question: ['のりもの', 'を えらんでね！'],
     items: [
-      { emoji:'🚗', name:'くるま',  correct:true  },
-      { emoji:'🚂', name:'でんしゃ',correct:true  },
-      { emoji:'🐶', name:'いぬ',    correct:false },
-      { emoji:'🚀', name:'ロケット',correct:true  },
-      { emoji:'🍎', name:'りんご',  correct:false },
-      { emoji:'⚽', name:'ボール',  correct:false },
-      { emoji:'🍌', name:'バナナ',  correct:false },
-      { emoji:'🦋', name:'ちょうちょ',correct:false },
+      { emoji:'🚗', name:'くるま',    correct:true  },
+      { emoji:'🚂', name:'でんしゃ',  correct:true  },
+      { emoji:'🚀', name:'ロケット',  correct:true  },
+      { emoji:'✈️', name:'ひこうき',  correct:true  },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'⚽', name:'ボール',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
     ],
-    hint: '🚂 でんしゃと 🚗 くるまは\n「うごくもの」でも「のりもの」でも あるね！\nぶんけい（もんだい）がちがうと こたえもちがう！',
+    hint: '🚀 ロケットも のりものだよ！\nうちゅうまで とんでいけるんだ！🌟\n🚗 くるまと 🚂 でんしゃは のりものでも うごくものでも あるね！',
+  },
+  // ── 4. いきもの ──
+  {
+    question: ['いきもの', 'を えらんでね！'],
+    items: [
+      { emoji:'🐶', name:'いぬ',      correct:true  },
+      { emoji:'🐟', name:'さかな',    correct:true  },
+      { emoji:'🦋', name:'ちょうちょ',correct:true  },
+      { emoji:'🐱', name:'ねこ',      correct:true  },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+      { emoji:'🏠', name:'いえ',      correct:false },
+    ],
+    hint: '🦋 ちょうちょも いきものだよ！\nちいさいけど ちゃんと いきているんだ！\n🐟 さかなは いきものでも たべものでも うごくものでも あるよ！',
+  },
+  // ── 5. まるいもの ──
+  {
+    question: ['まるい もの', 'を えらんでね！'],
+    items: [
+      { emoji:'⚽', name:'ボール',    correct:true  },
+      { emoji:'🍎', name:'りんご',    correct:true  },
+      { emoji:'☀️', name:'たいよう',  correct:true  },
+      { emoji:'🍊', name:'みかん',    correct:true  },
+      { emoji:'🍌', name:'バナナ',    correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'🚂', name:'でんしゃ',  correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+    ],
+    hint: '☀️ たいようは ほんとうに まあるいよ！\n🍌 バナナは まがっているから まるくないね。\n🍊 みかんも ⚽ ボールも まあるい！',
+  },
+  // ── 6. そらをとぶもの ──
+  {
+    question: ['そらを とぶもの', 'を えらんでね！'],
+    items: [
+      { emoji:'✈️', name:'ひこうき',  correct:true  },
+      { emoji:'🦋', name:'ちょうちょ',correct:true  },
+      { emoji:'🚀', name:'ロケット',  correct:true  },
+      { emoji:'🐦', name:'とり',      correct:true  },
+      { emoji:'🐟', name:'さかな',    correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'🍎', name:'りんご',    correct:false },
+    ],
+    hint: '🦋 ちょうちょは いきものだけど\nそらも とべるんだ！すごいね！\n✈️ ひこうきは のりものでも そらをとぶものでも あるよ！',
+  },
+  // ── 7. あかいもの ──
+  {
+    question: ['あかい もの', 'を えらんでね！'],
+    items: [
+      { emoji:'🍎', name:'りんご',    correct:true  },
+      { emoji:'🍓', name:'いちご',    correct:true  },
+      { emoji:'🍅', name:'トマト',    correct:true  },
+      { emoji:'🍒', name:'さくらんぼ',correct:true  },
+      { emoji:'🍌', name:'バナナ',    correct:false },
+      { emoji:'🐸', name:'かえる',    correct:false },
+      { emoji:'🍊', name:'みかん',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+    ],
+    hint: '🍅 トマトは やさいだけど あかいね！\n🍓 いちごも 🍒 さくらんぼも あかくて たべものだよ！\nたべものに あかいものが おおいね！',
+  },
+  // ── 8. きいろいもの ──
+  {
+    question: ['きいろい もの', 'を えらんでね！'],
+    items: [
+      { emoji:'🍌', name:'バナナ',    correct:true  },
+      { emoji:'🌻', name:'ひまわり',  correct:true  },
+      { emoji:'☀️', name:'たいよう',  correct:true  },
+      { emoji:'⭐', name:'ほし',      correct:true  },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'🐸', name:'かえる',    correct:false },
+      { emoji:'🍊', name:'みかん',    correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+    ],
+    hint: '⭐ ほしも ☀️ たいようも きいろいね！\nそらには きいろいものが おおいよ！\n🌻 ひまわりは きいろい おはなだよ！',
+  },
+  // ── 9. みずのなかにいるもの ──
+  {
+    question: ['みずの なかに いるもの', 'を えらんでね！'],
+    items: [
+      { emoji:'🐟', name:'さかな',    correct:true  },
+      { emoji:'🐙', name:'タコ',      correct:true  },
+      { emoji:'🦀', name:'カニ',      correct:true  },
+      { emoji:'🐸', name:'かえる',    correct:true  },
+      { emoji:'🦋', name:'ちょうちょ',correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'🍎', name:'りんご',    correct:false },
+    ],
+    hint: '🐸 かえるは みずのなかでも\nりくでも いきられるよ！すごい！\n🐙 タコは 8ほんのあしが あるんだって！',
+  },
+  // ── 10. おとがでるもの ──
+  {
+    question: ['おとが でるもの', 'を えらんでね！'],
+    items: [
+      { emoji:'🎹', name:'ピアノ',    correct:true  },
+      { emoji:'🥁', name:'たいこ',    correct:true  },
+      { emoji:'🐶', name:'いぬ',      correct:true  },
+      { emoji:'🚂', name:'でんしゃ',  correct:true  },
+      { emoji:'📚', name:'ほん',      correct:false },
+      { emoji:'🌸', name:'さくら',    correct:false },
+      { emoji:'🏠', name:'いえ',      correct:false },
+      { emoji:'🍎', name:'りんご',    correct:false },
+    ],
+    hint: '🐶 いぬは「わんわん」って おとを だすね！\n🚂 でんしゃも「ガタンゴトン」ってなるよ！\nいきものも おとがでる！',
+  },
+  // ── 11. はな や き ──
+  {
+    question: ['はな や き を えらんでね！'],
+    items: [
+      { emoji:'🌸', name:'さくら',    correct:true  },
+      { emoji:'🌻', name:'ひまわり',  correct:true  },
+      { emoji:'🌳', name:'き',        correct:true  },
+      { emoji:'🌺', name:'はな',      correct:true  },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'🍦', name:'アイス',    correct:false },
+      { emoji:'⚽', name:'ボール',    correct:false },
+    ],
+    hint: '🌸 さくらも 🌻 ひまわりも はなだね！\nはなや きは しょくぶつのなかまだよ。\nみず と ひかりで そだつんだ！',
+  },
+  // ── 12. あまいもの ──
+  {
+    question: ['あまい もの', 'を えらんでね！'],
+    items: [
+      { emoji:'🍦', name:'アイス',    correct:true  },
+      { emoji:'🍰', name:'ケーキ',    correct:true  },
+      { emoji:'🍓', name:'いちご',    correct:true  },
+      { emoji:'🍌', name:'バナナ',    correct:true  },
+      { emoji:'🥕', name:'にんじん',  correct:false },
+      { emoji:'🐟', name:'さかな',    correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+    ],
+    hint: '🍓 いちごや 🍌 バナナは あまくて\nたべものでも あるよ！なかまが いくつも！\n🥕 にんじんは あまくないね。',
+  },
+  // ── 13. どうぶつえんにいるもの ──
+  {
+    question: ['どうぶつえんに いるもの', 'を えらんでね！'],
+    items: [
+      { emoji:'🦁', name:'ライオン',  correct:true  },
+      { emoji:'🐘', name:'ぞう',      correct:true  },
+      { emoji:'🦒', name:'キリン',    correct:true  },
+      { emoji:'🐧', name:'ペンギン',  correct:true  },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'🍕', name:'ピザ',      correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+      { emoji:'⚽', name:'ボール',    correct:false },
+    ],
+    hint: '🦒 キリンは くびが すごく ながい！\n🐧 ペンギンは とべないけど およぐのが とくい！\nぜんぶ どうぶつえんで みられるよ！',
+  },
+  // ── 14. うみにいるもの ──
+  {
+    question: ['うみに いるもの', 'を えらんでね！'],
+    items: [
+      { emoji:'🐟', name:'さかな',    correct:true  },
+      { emoji:'🐙', name:'タコ',      correct:true  },
+      { emoji:'🦀', name:'カニ',      correct:true  },
+      { emoji:'🐳', name:'くじら',    correct:true  },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'🦁', name:'ライオン',  correct:false },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'✈️', name:'ひこうき',  correct:false },
+    ],
+    hint: '🐳 くじらは うみに すんでいるよ！\nおおきいけど いきものなんだ。\n🐟 さかなは うみにいるものでも たべものでも あるね！',
+  },
+  // ── 15. がっき ──
+  {
+    question: ['がっきを えらんでね！'],
+    items: [
+      { emoji:'🎹', name:'ピアノ',    correct:true  },
+      { emoji:'🥁', name:'たいこ',    correct:true  },
+      { emoji:'🎺', name:'トランペット',correct:true },
+      { emoji:'🎻', name:'バイオリン', correct:true },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+      { emoji:'⚽', name:'ボール',    correct:false },
+    ],
+    hint: '🥁 たいこは たたいて おとを だすよ！\n🎻 バイオリンは ひいて おとを だすね。\nがっきは おとがでるものでも あるよ！',
+  },
+  // ── 16. よるにひかるもの ──
+  {
+    question: ['よるに ひかるもの', 'を えらんでね！'],
+    items: [
+      { emoji:'⭐', name:'ほし',      correct:true  },
+      { emoji:'🌙', name:'つき',      correct:true  },
+      { emoji:'🔦', name:'かいちゅうでんとう', correct:true },
+      { emoji:'🕯️', name:'ろうそく',  correct:true  },
+      { emoji:'☀️', name:'たいよう',  correct:false },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+    ],
+    hint: '⭐ ほしと 🌙 つきは よるだから みえるんだ！\n☀️ たいようは ひるに ひかるよ！\nよるは くらいから ひかるものが たいせつだね。',
+  },
+  // ── 17. やさい ──
+  {
+    question: ['やさいを えらんでね！'],
+    items: [
+      { emoji:'🥕', name:'にんじん',  correct:true  },
+      { emoji:'🍅', name:'トマト',    correct:true  },
+      { emoji:'🥦', name:'ブロッコリー',correct:true },
+      { emoji:'🌽', name:'とうもろこし',correct:true },
+      { emoji:'🍎', name:'りんご',    correct:false },
+      { emoji:'🍌', name:'バナナ',    correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+    ],
+    hint: '🍅 トマトは やさいだけど あかくて\nたべものでも あるよ！なかまが いっぱい！\n🥕 にんじんは つちのなかで そだつんだよ！',
+  },
+  // ── 18. くだもの ──
+  {
+    question: ['くだものを えらんでね！'],
+    items: [
+      { emoji:'🍎', name:'りんご',    correct:true  },
+      { emoji:'🍌', name:'バナナ',    correct:true  },
+      { emoji:'🍊', name:'みかん',    correct:true  },
+      { emoji:'🍓', name:'いちご',    correct:true  },
+      { emoji:'🥕', name:'にんじん',  correct:false },
+      { emoji:'🐶', name:'いぬ',      correct:false },
+      { emoji:'🚗', name:'くるま',    correct:false },
+      { emoji:'📚', name:'ほん',      correct:false },
+    ],
+    hint: '🍎 りんごや 🍊 みかんは くだものだね！\nたべものでも あるし あまいものでも あるよ！\nくだものは きや くさに なるんだよ🌱',
   },
 ];
 
 // ════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════
+const STAGES_PER_GAME = 5;
+let activeStages = [];
 let currentStage = 0;
 let selectedItems = new Set();
 let answered = false;
@@ -754,9 +962,27 @@ function goHome() {
 }
 
 // ════════════════════════════════════════
+// UTILITY
+// ════════════════════════════════════════
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ════════════════════════════════════════
 // GAME FLOW
 // ════════════════════════════════════════
 function startGame() {
+  // プールからランダムに5問選び、各問のアイテム順もシャッフル
+  const shuffledPool = shuffleArray(STAGE_POOL);
+  activeStages = shuffledPool.slice(0, STAGES_PER_GAME).map(stage => ({
+    ...stage,
+    items: shuffleArray(stage.items),
+  }));
   currentStage = 0;
   renderStageDots();
   loadStage(currentStage);
@@ -766,7 +992,7 @@ function startGame() {
 function renderStageDots() {
   const container = document.getElementById('stage-dots');
   container.innerHTML = '';
-  STAGES.forEach((_, i) => {
+  activeStages.forEach((_, i) => {
     const dot = document.createElement('div');
     dot.className = 'stage-dot' +
       (i < currentStage  ? ' done'   : '') +
@@ -779,7 +1005,7 @@ function loadStage(idx) {
   selectedItems.clear();
   answered = false;
 
-  const stage = STAGES[idx];
+  const stage = activeStages[idx];
 
   // Question
   const q = document.getElementById('question-text');
@@ -842,7 +1068,7 @@ function checkAnswer() {
   if (answered) return;
   answered = true;
 
-  const stage = STAGES[currentStage];
+  const stage = activeStages[currentStage];
   const items = stage.items;
 
   let correctHits  = 0; // 正解を選んだ数
@@ -897,7 +1123,7 @@ function checkAnswer() {
 
 function nextStage() {
   currentStage++;
-  if (currentStage >= STAGES.length) {
+  if (currentStage >= activeStages.length) {
     launchConfetti();
     showScreen('screen-clear');
   } else {
