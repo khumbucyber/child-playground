@@ -526,10 +526,10 @@ function drawBatter(W, H) {
   ctx.fillRect(bx - s*0.34, feet - s*1.08, s*0.35, s*0.08);
   ctx.beginPath(); ctx.arc(bx - s*0.03, feet - s*0.92, s*0.08, 0, Math.PI*2); ctx.fill();
 
-  // Bat angles — rest upper-right (held back), contact aligned with ball position, follow-through right-horizontal (far side)
+  // Bat angles — rest upper-right (held back), contact aligned with ball position, follow-through upper-left (wrap over front shoulder)
   const restAngle    =  Math.PI * 0.32;   // bat held back upper-right
   const contactAngle = -Math.PI * 0.72;   // barrel at ball position (lower-left, aligns with pitch at p=0.84)
-  const followAngle  = -Math.PI * 1.50;   // follow-through: barrel pointing right-horizontal = far side of body
+  const followAngle  = -Math.PI * 0.28;   // follow-through: barrel wraps to upper-left (clockwise from contact = natural wrap-around)
 
   let batAngle;
   if (sw < 0.52) {
@@ -547,7 +547,10 @@ function drawBatter(W, H) {
     for (let m = 1; m <= 4; m++) {
       ctx.save();
       ctx.translate(gripX, gripY);
-      const trailAngle = batAngle + m * 0.18;  // trail lags behind swing direction
+      // Forward swing: angle decreases, trail at batAngle + offset (where bat came from)
+      // Follow-through: angle increases, trail at batAngle - offset (where bat came from)
+      const trailDir  = sw < 0.52 ? 1 : -1;
+      const trailAngle = batAngle + trailDir * m * 0.18;
       ctx.rotate(trailAngle);
       ctx.globalAlpha = 0.07;
       ctx.fillStyle = '#8B4513';
@@ -598,8 +601,8 @@ function drawBatter(W, H) {
 
   ctx.restore();
 
-  // Whoosh arc (swings from right to left)
-  if (sw > 0.1 && sw < 0.92) {
+  // Whoosh arc (forward swing only — hide during follow-through to avoid backwards-arc artifact)
+  if (sw > 0.1 && sw < 0.54) {
     ctx.save();
     ctx.translate(gripX, gripY - batLen * 0.85);
     ctx.strokeStyle = 'rgba(200,230,255,0.45)';
