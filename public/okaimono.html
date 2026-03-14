@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>おかいもの ゲーム 🪙</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: linear-gradient(160deg, #fffbe8 0%, #ffe8b0 60%, #ffd480 100%);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ─── Header ─── */
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px 6px;
+  gap: 8px;
+}
+
+.back-btn {
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 900;
+  color: #7a5a10;
+  background: rgba(255,255,255,0.8);
+  border-radius: 999px;
+  padding: 6px 12px;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(160,100,0,0.18);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #5a3800;
+}
+
+.level-badge {
+  font-size: 12px;
+  font-weight: 900;
+  background: rgba(255,255,255,0.8);
+  color: #7a5a10;
+  padding: 6px 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(160,100,0,0.18);
+  white-space: nowrap;
+}
+
+/* ─── Shop counter ─── */
+.shop {
+  flex-shrink: 0;
+  margin: 0 12px 0;
+  background: linear-gradient(160deg, #7a4010 0%, #5a2800 100%);
+  border-radius: 22px;
+  padding: 14px 16px 16px;
+  text-align: center;
+  box-shadow: 0 6px 24px rgba(80,40,0,0.32);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 130px;
+}
+
+/* shelf line */
+.shop::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36%;
+  background: rgba(0,0,0,0.2);
+  border-radius: 0 0 22px 22px;
+}
+
+.shopkeeper {
+  font-size: 40px;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));
+  animation: keeperBob 2.2s ease-in-out infinite;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+@keyframes keeperBob {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+.item-display {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.item-emoji {
+  font-size: 60px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));
+  animation: itemFloat 2.8s ease-in-out infinite;
+  transition: all 0.25s;
+}
+@keyframes itemFloat {
+  0%,100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-6px) scale(1.04); }
+}
+
+.item-name {
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff8e0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  margin-top: 4px;
+}
+
+.price-tag {
+  display: inline-block;
+  background: #fffbe0;
+  color: #5a3800;
+  font-size: 22px;
+  font-weight: 900;
+  padding: 4px 18px;
+  border-radius: 999px;
+  margin-top: 6px;
+  box-shadow: 0 3px 0 #c8a020, 0 5px 14px rgba(0,0,0,0.22);
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Progress dots ─── */
+.progress-area {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0 4px;
+}
+.dot {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: rgba(140,100,20,0.25);
+  transition: all 0.3s;
+}
+.dot.done    { background: #ffcc00; box-shadow: 0 0 8px rgba(255,200,0,0.7); }
+.dot.current { background: #ff8822; box-shadow: 0 0 8px rgba(255,136,34,0.7); transform: scale(1.25); }
+
+/* ─── Feedback ─── */
+.feedback {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: #d04020;
+  min-height: 20px;
+  padding: 0 12px;
+  transition: opacity 0.3s;
+}
+.feedback.hidden { opacity: 0; }
+
+/* ─── Payment tray ─── */
+.tray-section {
+  flex-shrink: 0;
+  margin: 4px 12px 0;
+  background: rgba(255,255,255,0.65);
+  border-radius: 18px;
+  padding: 10px 14px;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.07);
+}
+.section-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #8a6020;
+  margin-bottom: 6px;
+}
+.tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 44px;
+  align-items: center;
+}
+.tray-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.total {
+  font-size: 22px;
+  font-weight: 900;
+  color: #5a3800;
+  transition: color 0.2s;
+}
+.total.over    { color: #e03020; animation: shake 0.4s; }
+.total.correct { color: #308050; }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-6px); }
+  40%,80% { transform: translateX(6px); }
+}
+.undo-btn {
+  background: #ff8888;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 3px 0 #c85050, 0 4px 10px rgba(200,80,80,0.3);
+  min-height: 44px;
+}
+.undo-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #c85050; }
+
+/* ─── Wallet ─── */
+.wallet-section {
+  flex: 1;
+  margin: 6px 12px 8px;
+  background: rgba(255,255,255,0.8);
+  border-radius: 18px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 16px rgba(120,80,0,0.12);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.wallet {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+}
+
+/* ─── Coins ─── */
+.coin-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  padding: 4px;
+  border-radius: 14px;
+  transition: transform 0.15s;
+}
+.coin-btn:active:not(:disabled) { transform: scale(0.88); }
+.coin-btn:disabled { opacity: 0.28; pointer-events: none; }
+
+.coin {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.22), 0 6px 14px rgba(0,0,0,0.18);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  text-align: center;
+  transition: transform 0.15s;
+}
+.coin-btn:active:not(:disabled) .coin { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.22); }
+
+/* Coin in tray (smaller, tappable) */
+.tray-coin {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.14);
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+  transition: transform 0.12s;
+}
+.tray-coin:active { transform: scale(0.88); }
+
+/* Coin color classes */
+.c1   { background: radial-gradient(circle at 38% 34%, #e8eef2, #a0b0bc); color: #4a5a62; }
+.c5   { background: radial-gradient(circle at 38% 34%, #ead870, #a87a20); color: #5a3a00; }
+.c10  { background: radial-gradient(circle at 38% 34%, #e09060, #8a3c10); color: #3a1800; }
+.c50  { background: radial-gradient(circle at 38% 34%, #dce8ec, #8aa0a8); color: #3a4c54; }
+.c100 { background: radial-gradient(circle at 38% 34%, #e0eaf0, #90a8b4); color: #324050; }
+.c500 { background: radial-gradient(circle at 38% 34%, #f2dc80, #b88c20); color: #4a3400; }
+
+.coin-count {
+  font-size: 14px;
+  font-weight: 900;
+  color: #5a3800;
+  background: rgba(255,255,255,0.82);
+  border-radius: 999px;
+  padding: 2px 8px;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* ─── Success modal ─── */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.modal.show {
+  opacity: 1;
+  pointer-events: all;
+}
+.modal-box {
+  background: white;
+  border-radius: 30px;
+  padding: 30px 40px;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.32);
+  transform: scale(0.75);
+  transition: transform 0.35s cubic-bezier(.34,1.56,.64,1);
+}
+.modal.show .modal-box { transform: scale(1); }
+.modal-emoji { font-size: 68px; line-height: 1; margin-bottom: 12px; }
+.modal-text  { font-size: 24px; font-weight: 900; color: #3a7050; margin-bottom: 18px; line-height: 1.4; }
+.ok-btn {
+  background: linear-gradient(135deg, #68d890, #3ab060);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 36px;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 4px 0 #258040, 0 6px 20px rgba(40,160,80,0.4);
+  min-height: 44px;
+}
+.ok-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #258040; }
+
+/* ─── Confetti ─── */
+.confetti {
+  position: fixed;
+  pointer-events: none;
+  font-size: 22px;
+  animation: fall linear forwards;
+  z-index: 200;
+}
+@keyframes fall {
+  from { transform: translateY(-30px) rotate(0deg); opacity: 1; }
+  to   { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <a href="./index.html" class="back-btn">← もどる</a>
+  <div class="header-title">🪙 おかいもの</div>
+  <div class="level-badge" id="levelBadge">Lv1 ⭐</div>
+</div>
+
+<!-- Shop -->
+<div class="shop">
+  <div class="shopkeeper" id="shopkeeper">🐻</div>
+  <div class="item-display">
+    <div class="item-emoji" id="itemEmoji">🍬</div>
+    <div class="item-name" id="itemName">あめ</div>
+    <div class="price-tag" id="priceTag">2えん</div>
+  </div>
+</div>
+
+<!-- Progress dots -->
+<div class="progress-area" id="progressArea"></div>
+
+<!-- Feedback -->
+<p class="feedback hidden" id="feedback">おおすぎます！</p>
+
+<!-- Payment tray -->
+<div class="tray-section">
+  <div class="section-label">💰 はらうおかね</div>
+  <div class="tray" id="tray"></div>
+  <div class="tray-footer">
+    <span class="total" id="total">0えん</span>
+    <button class="undo-btn" onclick="undoLast()">← もどす</button>
+  </div>
+</div>
+
+<!-- Wallet -->
+<div class="wallet-section">
+  <div class="section-label">👛 おさいふ</div>
+  <div class="wallet" id="wallet"></div>
+</div>
+
+<!-- Success modal -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="modal-emoji" id="modalEmoji">🎉</div>
+    <div class="modal-text" id="modalText">ぴったり！</div>
+    <button class="ok-btn" id="okBtn" onclick="advance()">つぎへ ▶</button>
+  </div>
+</div>
+
+<script>
+// ─── Game data ────────────────────────────────────────────
+const LEVELS = [
+  {
+    name: 'Lv1', stars: '⭐', keeper: '🐻',
+    coins: [{ value: 1, label: '1えん', cls: 'c1', count: 8 }],
+    items: [
+      { name: 'あめ',    emoji: '🍬', price: 2 },
+      { name: 'えんぴつ',emoji: '✏️', price: 3 },
+      { name: 'りんご',  emoji: '🍎', price: 4 },
+      { name: 'いちご',  emoji: '🍓', price: 5 },
+    ]
+  },
+  {
+    name: 'Lv2', stars: '⭐⭐', keeper: '🐰',
+    coins: [
+      { value: 1, label: '1えん', cls: 'c1', count: 5 },
+      { value: 5, label: '5えん', cls: 'c5', count: 4 },
+    ],
+    items: [
+      { name: 'ジュース',   emoji: '🧃', price: 6 },
+      { name: 'アイス',     emoji: '🍦', price: 8 },
+      { name: 'チョコ',     emoji: '🍫', price: 9 },
+    ]
+  },
+  {
+    name: 'Lv3', stars: '⭐⭐⭐', keeper: '🐱',
+    coins: [
+      { value: 1,  label: '1えん',  cls: 'c1',  count: 5 },
+      { value: 5,  label: '5えん',  cls: 'c5',  count: 3 },
+      { value: 10, label: '10えん', cls: 'c10', count: 3 },
+    ],
+    items: [
+      { name: 'おにぎり',       emoji: '🍙', price: 12 },
+      { name: 'ケーキ',         emoji: '🎂', price: 15 },
+      { name: 'ハンバーガー',   emoji: '🍔', price: 18 },
+    ]
+  },
+  {
+    name: 'Lv4', stars: '⭐⭐⭐⭐', keeper: '🦊',
+    coins: [
+      { value: 10,  label: '10えん',  cls: 'c10',  count: 5 },
+      { value: 50,  label: '50えん',  cls: 'c50',  count: 3 },
+      { value: 100, label: '100えん', cls: 'c100', count: 2 },
+    ],
+    items: [
+      { name: 'ぬいぐるみ', emoji: '🧸', price:  60 },
+      { name: 'えほん',     emoji: '📚', price:  80 },
+      { name: 'ロケット',   emoji: '🚀', price: 120 },
+    ]
+  },
+];
+
+// ─── State ────────────────────────────────────────────────
+let lvIdx   = 0;
+let itemIdx = 0;
+let wallet  = [];   // { value, label, cls, remaining }
+let tray    = [];   // { value, label, cls, walletIdx }
+let done    = false;
+
+// ─── Init ─────────────────────────────────────────────────
+function startLevel() {
+  const lv = LEVELS[lvIdx];
+  document.getElementById('levelBadge').textContent = `${lv.name} ${lv.stars}`;
+  itemIdx = 0;
+  loadItem();
+}
+
+function loadItem() {
+  const lv   = LEVELS[lvIdx];
+  const item = lv.items[itemIdx];
+
+  wallet = lv.coins.map(c => ({ ...c, remaining: c.count }));
+  tray   = [];
+  done   = false;
+
+  document.getElementById('shopkeeper').textContent = lv.keeper;
+  document.getElementById('itemEmoji').textContent  = item.emoji;
+  document.getElementById('itemName').textContent   = item.name;
+  document.getElementById('priceTag').textContent   = item.price + 'えん';
+
+  hideFeedback();
+  renderProgress();
+  renderWallet();
+  renderTray();
+}
+
+// ─── Rendering ────────────────────────────────────────────
+function renderProgress() {
+  const lv    = LEVELS[lvIdx];
+  const area  = document.getElementById('progressArea');
+  area.innerHTML = '';
+  lv.items.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < itemIdx ? ' done' : i === itemIdx ? ' current' : '');
+    area.appendChild(d);
+  });
+}
+
+function renderWallet() {
+  const el = document.getElementById('wallet');
+  el.innerHTML = '';
+  wallet.forEach((coin, wi) => {
+    const btn = document.createElement('button');
+    btn.className = 'coin-btn';
+    btn.disabled = coin.remaining === 0;
+    btn.addEventListener('click', () => addCoin(wi));
+
+    const circle = document.createElement('div');
+    circle.className = `coin ${coin.cls}`;
+    circle.textContent = coin.label;
+
+    const cnt = document.createElement('div');
+    cnt.className = 'coin-count';
+    cnt.textContent = `×${coin.remaining}`;
+
+    btn.appendChild(circle);
+    btn.appendChild(cnt);
+    el.appendChild(btn);
+  });
+}
+
+function renderTray() {
+  const el = document.getElementById('tray');
+  el.innerHTML = '';
+  tray.forEach((coin, ti) => {
+    const chip = document.createElement('div');
+    chip.className = `tray-coin ${coin.cls}`;
+    chip.textContent = coin.label.replace('えん', '');
+    chip.addEventListener('click', () => removeCoin(ti));
+    el.appendChild(chip);
+  });
+
+  // Update total
+  const price = LEVELS[lvIdx].items[itemIdx].price;
+  const sum   = tray.reduce((s, c) => s + c.value, 0);
+  const totalEl = document.getElementById('total');
+  totalEl.textContent = sum + 'えん';
+  totalEl.classList.remove('over', 'correct');
+
+  if (sum > price) {
+    totalEl.classList.add('over');
+    showFeedback('おおすぎます！ コインを もどしてね 💦');
+  } else if (sum === price && sum > 0) {
+    totalEl.classList.add('correct');
+    hideFeedback();
+    if (!done) { done = true; setTimeout(showModal, 350); }
+  } else {
+    hideFeedback();
+  }
+}
+
+// ─── Coin actions ─────────────────────────────────────────
+function addCoin(wi) {
+  if (done) return;
+  if (wallet[wi].remaining <= 0) return;
+  wallet[wi].remaining--;
+  tray.push({ value: wallet[wi].value, label: wallet[wi].label, cls: wallet[wi].cls, walletIdx: wi });
+  renderWallet();
+  renderTray();
+}
+
+function removeCoin(ti) {
+  if (done) return;
+  const coin = tray[ti];
+  wallet[coin.walletIdx].remaining++;
+  tray.splice(ti, 1);
+  renderWallet();
+  renderTray();
+}
+
+function undoLast() {
+  if (tray.length === 0) return;
+  removeCoin(tray.length - 1);
+}
+
+// ─── Modal ────────────────────────────────────────────────
+function showModal() {
+  const lv          = LEVELS[lvIdx];
+  const lastItem    = itemIdx === lv.items.length - 1;
+  const lastLevel   = lvIdx === LEVELS.length - 1;
+  const emojiEl     = document.getElementById('modalEmoji');
+  const textEl      = document.getElementById('modalText');
+  const btnEl       = document.getElementById('okBtn');
+
+  spawnConfetti();
+
+  if (lastItem && lastLevel) {
+    emojiEl.textContent = '🏆';
+    textEl.innerHTML    = 'ぜんぶ クリア！<br>すごい！！';
+    btnEl.textContent   = 'はじめから ▶';
+  } else if (lastItem) {
+    emojiEl.textContent = '🎊';
+    textEl.innerHTML    = `レベル クリア！<br>${lv.stars}`;
+    btnEl.textContent   = 'つぎの レベルへ ▶';
+  } else {
+    emojiEl.textContent = '🎉';
+    textEl.innerHTML    = 'ぴったり！<br>すごい！';
+    btnEl.textContent   = 'つぎへ ▶';
+  }
+
+  document.getElementById('modal').classList.add('show');
+}
+
+function advance() {
+  document.getElementById('modal').classList.remove('show');
+  const lv       = LEVELS[lvIdx];
+  const lastItem = itemIdx === lv.items.length - 1;
+  const lastLv   = lvIdx === LEVELS.length - 1;
+
+  if (lastItem && lastLv) {
+    lvIdx = 0; itemIdx = 0;
+    startLevel();
+  } else if (lastItem) {
+    lvIdx++;
+    startLevel();
+  } else {
+    itemIdx++;
+    loadItem();
+  }
+}
+
+// ─── Feedback ─────────────────────────────────────────────
+function showFeedback(msg) {
+  const el = document.getElementById('feedback');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function hideFeedback() {
+  document.getElementById('feedback').classList.add('hidden');
+}
+
+// ─── Confetti ─────────────────────────────────────────────
+function spawnConfetti() {
+  const fx = ['🎉','⭐','🌟','✨','🎊','💛','💚','💙','🪙'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.textContent = fx[Math.floor(Math.random() * fx.length)];
+    el.style.left = (Math.random() * 100) + 'vw';
+    el.style.top  = '-32px';
+    el.style.animationDuration  = (1.4 + Math.random() * 1.2) + 's';
+    el.style.animationDelay     = (Math.random() * 0.4) + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+}
+
+// ─── Start ────────────────────────────────────────────────
+startLevel();
+</script>
+</body>
+</html>
