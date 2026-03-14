@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>しんけいすいじゃく 🧠</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #2a1f4e;
+}
+
+* {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html, body {
+  min-height: 100dvh;
+  font-family: 'Nunito', 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', sans-serif;
+  background: linear-gradient(160deg, #c4e8ff 0%, #e8d4ff 55%, #ffd4ec 100%);
+  overflow-x: hidden;
+}
+
+/* ─── Screens ─── */
+.screen {
+  display: none;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+}
+.screen.active { display: flex; }
+
+/* ─── Title Screen ─── */
+#screen-title {
+  justify-content: center;
+  padding: 40px 24px calc(40px + env(safe-area-inset-bottom));
+  gap: 20px;
+  text-align: center;
+}
+
+.title-icon {
+  font-size: 80px;
+  animation: bounce 1.8s ease-in-out infinite;
+}
+@keyframes bounce {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-16px); }
+}
+
+.title-text {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.25;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.75);
+}
+
+.title-sub {
+  font-size: 14px;
+  color: #6a5a8a;
+  font-weight: 700;
+}
+
+.level-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.btn-level {
+  border: none;
+  border-radius: 20px;
+  padding: 16px 20px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.13), 0 8px 20px rgba(0,0,0,0.1);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.btn-level:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.13);
+}
+.btn-level .lv-name { flex: 1; text-align: left; }
+.btn-level .lv-info { font-size: 12px; opacity: 0.75; }
+
+.lv1 { background: linear-gradient(135deg, #ffe066, #ffb830); color: #5a3800; }
+.lv2 { background: linear-gradient(135deg, #5edbb8, #2ab890); color: #003a2e; }
+.lv3 { background: linear-gradient(135deg, #ff8a7a, #ff5040); color: #5a0a00; }
+.lv4 { background: linear-gradient(135deg, #c4b0ff, #8a6aff); color: #1a004a; }
+
+/* ─── Game Screen ─── */
+#screen-game {
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.game-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: calc(12px + env(safe-area-inset-top)) 12px 10px;
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.back-btn {
+  background: rgba(255,255,255,0.75);
+  border: none;
+  border-radius: 50%;
+  width: 44px; height: 44px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.game-stats {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat-box {
+  background: rgba(255,255,255,0.75);
+  border-radius: 12px;
+  padding: 5px 12px;
+  text-align: center;
+  min-width: 52px;
+}
+.stat-label { font-size: 9px; color: #6a5a8a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-size: 22px; font-weight: 900; color: var(--ink); line-height: 1.1; }
+
+.level-badge {
+  background: rgba(255,255,255,0.75);
+  border-radius: 12px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--ink);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Card Grid ─── */
+.card-grid {
+  display: grid;
+  gap: 6px;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  width: 100%;
+}
+
+.grid-lv1 { grid-template-columns: repeat(4, 1fr); }
+.grid-lv2 { grid-template-columns: repeat(4, 1fr); }
+.grid-lv3 { grid-template-columns: repeat(5, 1fr); }
+.grid-lv4 { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+
+/* ─── Memory Card ─── */
+.card-wrap {
+  aspect-ratio: 1;
+  perspective: 600px;
+  cursor: pointer;
+}
+
+.card-inner {
+  width: 100%; height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 10px;
+}
+.card-wrap.flipped .card-inner,
+.card-wrap.matched .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face, .card-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back {
+  background: linear-gradient(135deg, #7c5cbf, #9b7de0);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+  font-size: clamp(16px, 5vw, 28px);
+}
+
+.card-face {
+  background: white;
+  transform: rotateY(180deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  font-size: clamp(18px, 5.5vw, 32px);
+}
+
+.card-wrap.matched .card-face {
+  background: linear-gradient(135deg, #fffacd, #fff0a0);
+  animation: matchPop 0.45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes matchPop {
+  0%   { transform: rotateY(180deg) scale(1); }
+  50%  { transform: rotateY(180deg) scale(1.18); }
+  100% { transform: rotateY(180deg) scale(1); }
+}
+
+/* ─── Clear Screen ─── */
+#screen-clear {
+  justify-content: center;
+  padding: 32px 24px calc(32px + env(safe-area-inset-bottom));
+  gap: 18px;
+  text-align: center;
+}
+
+.clear-icon {
+  font-size: 96px;
+  animation: spinIn 0.7s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes spinIn {
+  0%   { transform: scale(0) rotate(-180deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0deg);    opacity: 1; }
+}
+
+.clear-title {
+  font-size: 38px;
+  font-weight: 900;
+  color: var(--ink);
+  text-shadow: 0 4px 0 rgba(255,255,255,0.8);
+}
+
+.clear-score {
+  background: rgba(255,255,255,0.65);
+  border-radius: 24px;
+  padding: 20px 36px;
+  backdrop-filter: blur(8px);
+}
+.score-label { font-size: 13px; color: #6a5a8a; font-weight: 700; }
+.score-num   { font-size: 60px; font-weight: 900; color: var(--ink); line-height: 1.1; }
+.score-unit  { font-size: 14px; color: #8a7aaa; font-weight: 700; }
+
+.clear-comment {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--ink);
+  background: rgba(255,255,255,0.6);
+  border-radius: 16px;
+  padding: 10px 24px;
+}
+
+.clear-rating {
+  font-size: 36px;
+  letter-spacing: 6px;
+}
+
+.clear-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.btn-action {
+  border: none;
+  border-radius: 20px;
+  padding: 16px 24px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.12);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.btn-action:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.12);
+}
+.btn-retry { background: linear-gradient(135deg, #ff8a7a, #ff5040); color: white; }
+.btn-home  { background: linear-gradient(135deg, #c4b0ff, #8a6aff); color: white; }
+
+/* ─── Confetti ─── */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Title / Level Select ─── -->
+<div id="screen-title" class="screen active">
+  <div class="title-icon">🧠</div>
+  <div class="title-text">しんけい<br>すいじゃく</div>
+  <div class="title-sub">レベルを えらんでね！</div>
+  <div class="level-buttons">
+    <button class="btn-level lv1" onclick="startGame(1)">
+      <span class="lv-name">⭐ やさしい</span>
+      <span class="lv-info">12まい（6ペア）</span>
+    </button>
+    <button class="btn-level lv2" onclick="startGame(2)">
+      <span class="lv-name">⭐⭐ ふつう</span>
+      <span class="lv-info">16まい（8ペア）</span>
+    </button>
+    <button class="btn-level lv3" onclick="startGame(3)">
+      <span class="lv-name">⭐⭐⭐ むずかしい</span>
+      <span class="lv-info">20まい（10ペア）</span>
+    </button>
+    <button class="btn-level lv4" onclick="startGame(4)">
+      <span class="lv-name">⭐⭐⭐⭐ すごい！</span>
+      <span class="lv-info">40まい（20ペア）</span>
+    </button>
+  </div>
+</div>
+
+<!-- ─── Game ─── -->
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <button class="back-btn" onclick="goHome()">🏠</button>
+    <div class="game-stats">
+      <div class="stat-box">
+        <div class="stat-label">のこり</div>
+        <div class="stat-value" id="stat-remaining">-</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">ターン</div>
+        <div class="stat-value" id="stat-turns">0</div>
+      </div>
+    </div>
+    <div class="level-badge" id="level-badge">Lv1</div>
+  </div>
+  <div class="card-grid" id="card-grid"></div>
+</div>
+
+<!-- ─── Clear ─── -->
+<div id="screen-clear" class="screen">
+  <div class="confetti-container" id="confetti"></div>
+  <div class="clear-icon">🎉</div>
+  <div class="clear-title">クリア！！</div>
+  <div class="clear-score">
+    <div class="score-label">かかった ターン数</div>
+    <div class="score-num" id="final-turns">0</div>
+    <div class="score-unit">ターン</div>
+  </div>
+  <div class="clear-rating" id="clear-rating">⭐⭐⭐</div>
+  <div class="clear-comment" id="clear-comment">すごい！！</div>
+  <div class="clear-buttons">
+    <button class="btn-action btn-retry" onclick="retryGame()">🔄 もういちど</button>
+    <button class="btn-action btn-home" onclick="goHome()">🏠 レベルえらび</button>
+  </div>
+</div>
+
+<script>
+// 20 emoji pairs for the hardest level
+const ALL_EMOJIS = [
+  '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼',
+  '🐨','🐯','🦁','🐮','🐷','🦄','🐸','🐵',
+  '🦋','🐙','💩','🌈'
+];
+
+const LEVELS = {
+  1: { pairs: 6,  cols: 'grid-lv1', name: '⭐ やさしい' },
+  2: { pairs: 8,  cols: 'grid-lv2', name: '⭐⭐ ふつう' },
+  3: { pairs: 10, cols: 'grid-lv3', name: '⭐⭐⭐ むずかしい' },
+  4: { pairs: 20, cols: 'grid-lv4', name: '⭐⭐⭐⭐ すごい！' },
+};
+
+// [perfect, good] turn thresholds → 3 stars / 2 stars / 1 star
+const THRESHOLDS = {
+  1: [8,  14],
+  2: [12, 20],
+  3: [16, 26],
+  4: [30, 50],
+};
+
+const COMMENTS = {
+  3: ['さいこう！！🥇', 'きおくりょく つよすぎ！🏆', 'てんさい！！✨'],
+  2: ['よくできました！👏', 'じょうず！😄', 'すばらしい！🌟'],
+  1: ['よく がんばった！💪', 'つぎは もっとできるよ！🎈', 'ナイスチャレンジ！🎮'],
+};
+
+let currentLevel = 1;
+let flippedCards = [];
+let matchedPairs = 0;
+let turns = 0;
+let totalPairs = 0;
+let isLocked = false;
+
+// ─── Audio ───
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  return audioCtx;
+}
+
+function playFlip() {
+  const ctx = getAudio();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = 'sine';
+  o.frequency.setValueAtTime(700, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(450, ctx.currentTime + 0.08);
+  g.gain.setValueAtTime(0.18, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+  o.start(); o.stop(ctx.currentTime + 0.12);
+}
+
+function playMatch() {
+  const ctx = getAudio();
+  [523, 659, 784].forEach((freq, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine';
+    const t = ctx.currentTime + i * 0.1;
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.22, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    o.start(t); o.stop(t + 0.22);
+  });
+}
+
+function playNoMatch() {
+  const ctx = getAudio();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(280, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.2);
+  g.gain.setValueAtTime(0.12, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+  o.start(); o.stop(ctx.currentTime + 0.22);
+}
+
+function playWin() {
+  const ctx = getAudio();
+  [523, 659, 784, 1047, 1319].forEach((freq, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine';
+    const t = ctx.currentTime + i * 0.13;
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.25, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    o.start(t); o.stop(t + 0.28);
+  });
+}
+
+// ─── Screen management ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ─── Game logic ───
+function startGame(level) {
+  currentLevel = level;
+  flippedCards = [];
+  matchedPairs = 0;
+  turns = 0;
+  isLocked = false;
+
+  const cfg = LEVELS[level];
+  totalPairs = cfg.pairs;
+  updateStats();
+  document.getElementById('level-badge').textContent = cfg.name;
+
+  const emojis = ALL_EMOJIS.slice(0, cfg.pairs);
+  const cards = shuffle([...emojis, ...emojis]);
+
+  const grid = document.getElementById('card-grid');
+  grid.className = 'card-grid ' + cfg.cols;
+  grid.innerHTML = '';
+
+  cards.forEach((emoji, idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'card-wrap';
+    wrap.dataset.emoji = emoji;
+    wrap.dataset.idx = idx;
+    wrap.innerHTML = `
+      <div class="card-inner">
+        <div class="card-back">🌟</div>
+        <div class="card-face">${emoji}</div>
+      </div>`;
+    wrap.addEventListener('click', () => onCardClick(wrap));
+    grid.appendChild(wrap);
+  });
+
+  showScreen('screen-game');
+}
+
+function onCardClick(wrap) {
+  if (isLocked) return;
+  if (wrap.classList.contains('flipped') || wrap.classList.contains('matched')) return;
+
+  playFlip();
+  wrap.classList.add('flipped');
+  flippedCards.push(wrap);
+
+  if (flippedCards.length === 2) {
+    isLocked = true;
+    turns++;
+    updateStats();
+    checkMatch();
+  }
+}
+
+function checkMatch() {
+  const [a, b] = flippedCards;
+  if (a.dataset.emoji === b.dataset.emoji) {
+    setTimeout(() => {
+      a.classList.add('matched');
+      b.classList.add('matched');
+      playMatch();
+      matchedPairs++;
+      flippedCards = [];
+      isLocked = false;
+      updateStats();
+      if (matchedPairs === totalPairs) {
+        setTimeout(showClear, 700);
+      }
+    }, 300);
+  } else {
+    setTimeout(() => {
+      playNoMatch();
+      a.classList.remove('flipped');
+      b.classList.remove('flipped');
+      flippedCards = [];
+      isLocked = false;
+    }, 900);
+  }
+}
+
+function updateStats() {
+  document.getElementById('stat-remaining').textContent = totalPairs - matchedPairs;
+  document.getElementById('stat-turns').textContent = turns;
+}
+
+function showClear() {
+  playWin();
+  document.getElementById('final-turns').textContent = turns;
+
+  const [perfect, good] = THRESHOLDS[currentLevel];
+  const stars = turns <= perfect ? 3 : turns <= good ? 2 : 1;
+  document.getElementById('clear-rating').textContent = '⭐'.repeat(stars);
+
+  const comments = COMMENTS[stars];
+  document.getElementById('clear-comment').textContent =
+    comments[Math.floor(Math.random() * comments.length)];
+
+  showScreen('screen-clear');
+  launchConfetti();
+}
+
+function retryGame() {
+  document.getElementById('confetti').innerHTML = '';
+  startGame(currentLevel);
+}
+
+function goHome() {
+  document.getElementById('confetti').innerHTML = '';
+  showScreen('screen-title');
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ─── Confetti ───
+function launchConfetti() {
+  const container = document.getElementById('confetti');
+  container.innerHTML = '';
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9a3c','#ff85c2'];
+  for (let i = 0; i < 90; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    const size = Math.random() * 10 + 6;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.borderRadius = Math.random() > 0.5 ? '50%' : '3px';
+    const dur   = (Math.random() * 2 + 1.5).toFixed(2);
+    const delay = (Math.random() * 1.0).toFixed(2);
+    p.style.animation = `confettiFall ${dur}s ${delay}s linear forwards`;
+    container.appendChild(p);
+  }
+}
+</script>
+</body>
+</html>
