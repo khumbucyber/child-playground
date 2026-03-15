@@ -15,13 +15,23 @@ child-playground/
 ├── vercel.json             # Vercel設定（outputDirectory: public）
 ├── README.md
 ├── CLAUDE.md
+├── docs/specs/             # 各コンテンツの仕様書
+├── specs/                  # 仕様書（一部）
 │
 └── public/                 # Vercel公開ディレクトリ
     ├── index.html          # メニュー画面（こどもランド）
     ├── bouken-meiro.html   # ぼうけん迷路
     ├── tashite-goal.html   # たしてゴール！
+    ├── oekaki.html         # おえかき
     ├── music.html          # おんがく リズムゲーム
-    └── nakamawake.html     # なかまわけ名人
+    ├── quiz.html           # クイズ
+    ├── story.html          # おはなし
+    ├── shashin.html        # しゃしん
+    ├── nakamawake.html     # なかまわけ名人
+    ├── marubatsu.html      # まるばつゲーム
+    ├── baseball.html       # バッティング
+    ├── memory-game.html    # しんけいすいじゃく
+    └── okaimono.html       # おかいもの ゲーム
 ```
 
 > 新しいコンテンツは `.html` ファイルを追加し、`index.html` のカードを更新するだけで拡充できます。
@@ -34,11 +44,16 @@ child-playground/
 |---|---|---|---|
 | `bouken-meiro.html` | 🐶 ぼうけん めいろ | ✅ 公開中 | 4〜6歳 |
 | `tashite-goal.html` | 🔢 たして ゴール！ | ✅ 公開中 | 5歳〜小1 |
-| *(未作成)* | 🎨 おえかき | 🔜 準備中 | — |
-| `music.html` | 🎹 おんがく | ✅ 公開中 | 5歳〜小1 |
+| `oekaki.html` | 🎨 おえかき | ✅ 公開中 | 4〜6歳 |
+| `music.html` | 🎹 おんがく リズムゲーム | ✅ 公開中 | 5歳〜小1 |
+| `quiz.html` | 🧠 クイズ | ✅ 公開中 | 5歳〜小1 |
+| `story.html` | 📖 おはなし | ✅ 公開中 | 4〜6歳 |
+| `shashin.html` | 📷 しゃしん | ✅ 公開中 | 4〜6歳 |
 | `nakamawake.html` | 🔍 なかまわけ 名人 | ✅ 公開中 | 4〜6歳 |
-| *(未作成)* | 🧠 クイズ | 🔜 準備中 | — |
-| *(未作成)* | 📖 おはなし | 🔜 準備中 | — |
+| `marubatsu.html` | ⭕ まるばつ ゲーム | ✅ 公開中 | 4〜6歳 |
+| `baseball.html` | ⚾ バッティング | ✅ 公開中 | 5歳〜小1 |
+| `memory-game.html` | 🧠 しんけいすいじゃく | ✅ 公開中 | 4〜6歳 |
+| `okaimono.html` | 🪙 おかいもの ゲーム | ✅ 公開中 | 5歳〜小1 |
 
 ---
 
