@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🍣 かいてんずし</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  background: linear-gradient(160deg, #ffe4ec 0%, #ffd4a0 50%, #ffe4ec 100%);
+}
+
+/* ══ TITLE SCREEN ══ */
+#screen-title {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  gap: 20px;
+}
+
+.title-logo {
+  font-size: 80px;
+  animation: spin 4s linear infinite;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));
+}
+@keyframes spin {
+  0%   { transform: rotate(-8deg) scale(1); }
+  25%  { transform: rotate(0deg) scale(1.08); }
+  50%  { transform: rotate(8deg) scale(1); }
+  75%  { transform: rotate(0deg) scale(1.08); }
+  100% { transform: rotate(-8deg) scale(1); }
+}
+
+.title-text {
+  font-size: 32px;
+  font-weight: 900;
+  color: #c04060;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.8), 0 5px 16px rgba(192,64,96,0.3);
+  letter-spacing: 3px;
+  text-align: center;
+}
+.title-sub {
+  font-size: 14px;
+  color: #a06050;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.level-label {
+  font-size: 15px;
+  font-weight: 900;
+  color: #804050;
+  margin-bottom: 4px;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.level-btn {
+  border: none;
+  border-radius: 20px;
+  padding: 18px 10px;
+  font-family: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.12), 0 8px 20px rgba(0,0,0,0.12);
+}
+.level-btn:active { transform: scale(0.93) translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.12); }
+.level-btn .lv-icon { font-size: 28px; }
+.level-btn .lv-name { font-size: 15px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.level-btn .lv-stars { font-size: 12px; }
+.level-btn .lv-count { font-size: 11px; color: rgba(255,255,255,0.85); }
+
+.lv1 { background: linear-gradient(145deg, #ffd060, #ffb030); }
+.lv2 { background: linear-gradient(145deg, #70d880, #40c060); }
+.lv3 { background: linear-gradient(145deg, #60b8f8, #3090e8); }
+.lv4 { background: linear-gradient(145deg, #f870a0, #e04080); }
+
+/* ══ GAME SCREEN ══ */
+#screen-game {
+  height: 100dvh;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.game-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 6px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid rgba(255,255,255,0.6);
+}
+
+.back-btn {
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 900;
+  color: #c04060;
+  background: rgba(255,255,255,0.8);
+  border-radius: 999px;
+  padding: 6px 14px;
+  touch-action: manipulation;
+  border: 2px solid rgba(192,64,96,0.2);
+  cursor: pointer;
+}
+
+.game-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #c04060;
+  letter-spacing: 1px;
+}
+
+.score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.score-good {
+  font-size: 14px;
+  font-weight: 900;
+  color: #20a050;
+}
+.score-miss {
+  font-size: 12px;
+  font-weight: 900;
+  color: #e04060;
+}
+
+/* Progress bar */
+.progress-wrap {
+  flex-shrink: 0;
+  padding: 6px 16px 4px;
+  background: rgba(255,255,255,0.4);
+}
+.progress-track {
+  background: rgba(0,0,0,0.1);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd060, #ff8030);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  width: 0%;
+}
+
+/* Lane area */
+.lane-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 10px 0;
+}
+
+/* Conveyor belt - top-down oval */
+.conveyor {
+  width: 92%;
+  max-width: 380px;
+  aspect-ratio: 2.2 / 1;
+  position: relative;
+}
+
+.belt-outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #d4a870, #b87840);
+  box-shadow:
+    0 8px 32px rgba(140,80,20,0.35),
+    inset 0 -4px 12px rgba(0,0,0,0.15),
+    inset 0 4px 8px rgba(255,255,255,0.2);
+}
+
+/* Inner hole */
+.belt-inner {
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ffe8d0, #ffd4b0);
+  box-shadow:
+    inset 0 4px 16px rgba(180,100,40,0.25),
+    0 0 0 3px rgba(180,100,40,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inner-text {
+  font-size: 11px;
+  font-weight: 900;
+  color: #c08050;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Belt lane lines */
+.belt-lane {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 3px dashed rgba(255,255,255,0.35);
+}
+
+/* Sushi items */
+.sushi-item {
+  position: absolute;
+  width: 56px;
+  height: 44px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transform-origin: center;
+  animation: sushiPop 0.25s cubic-bezier(.34,1.56,.64,1) both;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.2));
+  transition: transform 0.12s;
+}
+.sushi-item:active { transform: scale(0.85); }
+
+@keyframes sushiPop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Sushi SVG-like CSS drawing */
+.sushi-body {
+  position: relative;
+  width: 54px;
+  height: 38px;
+}
+
+.sushi-rice {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 24px;
+  background: #fff8f0;
+  border-radius: 50% 50% 40% 40% / 60% 60% 40% 40%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.12), inset 0 -2px 4px rgba(0,0,0,0.06);
+}
+
+.sushi-neta {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 20px;
+  border-radius: 12px 12px 8px 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+
+.neta-maguro   { background: linear-gradient(160deg, #e84050, #c02040); }
+.neta-tamago   { background: linear-gradient(160deg, #ffe060, #f0c020); }
+.neta-ebi      { background: linear-gradient(160deg, #ff9070, #e06040); }
+.neta-salmon   { background: linear-gradient(160deg, #ff9050, #f07030); }
+.neta-ikura    { background: radial-gradient(circle at 40% 35%, #ff7050 30%, #e04020 100%); }
+.neta-avocado  { background: linear-gradient(160deg, #80c840, #509020); }
+
+/* Ikura dots */
+.neta-ikura::before {
+  content: '•• ••';
+  position: absolute;
+  font-size: 9px;
+  color: rgba(255,220,200,0.7);
+  top: 4px;
+  left: 8px;
+  letter-spacing: 2px;
+}
+
+/* Wasabi stripe */
+.sushi-nori {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 5px;
+  background: rgba(40,80,20,0.7);
+  border-radius: 3px;
+}
+
+/* Reaction overlay */
+#reaction-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  background: rgba(0,0,0,0.08);
+}
+
+.reaction-card {
+  background: white;
+  border-radius: 32px;
+  padding: 28px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: reactionIn 0.3s cubic-bezier(.34,1.56,.64,1);
+  max-width: 280px;
+  width: 85%;
+}
+@keyframes reactionIn {
+  from { transform: scale(0.4) rotate(-10deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Face CSS drawing */
+.face {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.face-happy {
+  background: radial-gradient(circle at 38% 35%, #ffe880, #ffca00);
+  box-shadow: 0 6px 20px rgba(255,200,0,0.4);
+}
+.face-spicy {
+  background: radial-gradient(circle at 38% 35%, #ff8060, #e03020);
+  box-shadow: 0 6px 20px rgba(220,60,30,0.4);
+}
+.face-hot {
+  background: radial-gradient(circle at 38% 35%, #ffb060, #ff7020);
+  box-shadow: 0 6px 20px rgba(255,140,40,0.4);
+}
+.face-cold {
+  background: radial-gradient(circle at 38% 35%, #a0d8f8, #50a8e8);
+  box-shadow: 0 6px 20px rgba(80,160,230,0.4);
+}
+.face-sick {
+  background: radial-gradient(circle at 38% 35%, #a0e8a0, #50c060);
+  box-shadow: 0 6px 20px rgba(80,180,80,0.4);
+}
+
+.face-emoji {
+  font-size: 52px;
+  line-height: 1;
+}
+
+.reaction-text {
+  font-size: 26px;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.reaction-text.good-text { color: #e08010; }
+.reaction-text.bad-text  { color: #c02040; }
+
+/* ══ RESULT SCREEN ══ */
+#screen-result {
+  height: 100dvh;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  gap: 20px;
+}
+
+.result-icon { font-size: 72px; animation: bounceIn 0.5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes bounceIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+.result-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #c04060;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+}
+
+.result-card {
+  background: rgba(255,255,255,0.85);
+  border-radius: 24px;
+  padding: 20px 32px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 900;
+}
+.result-row .label { color: #806050; }
+.result-row .val-good { color: #20a050; font-size: 22px; }
+.result-row .val-miss { color: #e04060; font-size: 22px; }
+
+.result-comment {
+  font-size: 16px;
+  font-weight: 900;
+  color: #805040;
+  text-align: center;
+}
+
+.btn-retry {
+  border: none;
+  border-radius: 999px;
+  padding: 16px 40px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  color: white;
+  background: linear-gradient(145deg, #ff8c50, #e06030);
+  box-shadow: 0 6px 0 #b04020, 0 8px 20px rgba(220,80,30,0.35);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.btn-retry:active { transform: translateY(4px); box-shadow: 0 2px 0 #b04020; }
+
+.btn-home {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 30px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  color: #c08060;
+  background: rgba(255,255,255,0.8);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.btn-home:active { transform: translateY(2px); }
+
+/* Floating sushi decorations */
+.float-sushi {
+  position: fixed;
+  pointer-events: none;
+  font-size: 24px;
+  opacity: 0.25;
+  z-index: 0;
+  animation: floatY 5s ease-in-out infinite;
+}
+.float-sushi:nth-child(1) { top: 5%;  left: 3%;  animation-delay: 0s; }
+.float-sushi:nth-child(2) { top: 15%; right: 4%; animation-delay: 1.5s; }
+.float-sushi:nth-child(3) { top: 70%; left: 5%;  animation-delay: 3s; }
+.float-sushi:nth-child(4) { top: 80%; right: 3%; animation-delay: 0.7s; }
+@keyframes floatY {
+  0%,100% { transform: translateY(0) rotate(-5deg); }
+  50%      { transform: translateY(-14px) rotate(5deg); }
+}
+
+/* Confetti container */
+.confetti-wrap {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 200;
+}
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confettiFall 1.8s ease-in forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Floating decorations -->
+<div class="float-sushi">🍣</div>
+<div class="float-sushi">🍱</div>
+<div class="float-sushi">🦐</div>
+<div class="float-sushi">🍶</div>
+
+<!-- ══════════ TITLE SCREEN ══════════ -->
+<div id="screen-title">
+  <div class="title-logo">🍣</div>
+  <div class="title-text">かいてん ずし</div>
+  <div class="title-sub">ながれてくる おすしを<br>タップして たべよう！<br>どれが あたり？ ドキドキ！</div>
+  <div class="level-label">レベルをえらんでね</div>
+  <div class="level-grid">
+    <button class="level-btn lv1" onclick="startGame(1)">
+      <span class="lv-icon">🌸</span>
+      <span class="lv-name">やさしい</span>
+      <span class="lv-stars">⭐</span>
+      <span class="lv-count">10こ たべよう</span>
+    </button>
+    <button class="level-btn lv2" onclick="startGame(2)">
+      <span class="lv-icon">🌿</span>
+      <span class="lv-name">ふつう</span>
+      <span class="lv-stars">⭐⭐</span>
+      <span class="lv-count">20こ たべよう</span>
+    </button>
+    <button class="level-btn lv3" onclick="startGame(3)">
+      <span class="lv-icon">🌊</span>
+      <span class="lv-name">むずかしい</span>
+      <span class="lv-stars">⭐⭐⭐</span>
+      <span class="lv-count">30こ たべよう</span>
+    </button>
+    <button class="level-btn lv4" onclick="startGame(4)">
+      <span class="lv-icon">🔥</span>
+      <span class="lv-name">げきむず</span>
+      <span class="lv-stars">⭐⭐⭐⭐</span>
+      <span class="lv-count">30こ たべよう</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ GAME SCREEN ══════════ -->
+<div id="screen-game">
+  <div class="game-header">
+    <button class="back-btn" onclick="goHome()">← もどる</button>
+    <div class="game-title">🍣 かいてんずし</div>
+    <div class="score-box">
+      <div class="score-good" id="score-good">🍣 0 / 0</div>
+      <div class="score-miss" id="score-miss">💥 ミス 0</div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+  <div class="lane-area">
+    <div class="conveyor" id="conveyor">
+      <div class="belt-outer"></div>
+      <div class="belt-lane"></div>
+      <div class="belt-inner">
+        <div class="inner-text">タップして<br>たべよう！</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ REACTION OVERLAY ══════════ -->
+<div id="reaction-overlay">
+  <div class="reaction-card">
+    <div class="face" id="reaction-face">
+      <div class="face-emoji" id="reaction-emoji">😄</div>
+    </div>
+    <div class="reaction-text" id="reaction-text">うまい！</div>
+  </div>
+</div>
+
+<!-- ══════════ RESULT SCREEN ══════════ -->
+<div id="screen-result">
+  <div class="confetti-wrap" id="confetti-wrap"></div>
+  <div class="result-icon" id="result-icon">🎉</div>
+  <div class="result-title" id="result-title">クリア！！</div>
+  <div class="result-card">
+    <div class="result-row">
+      <span class="label">🍣 たべた（あたり）</span>
+      <span class="val-good" id="result-good">0こ</span>
+    </div>
+    <div class="result-row">
+      <span class="label">💥 ハズレ</span>
+      <span class="val-miss" id="result-miss">0こ</span>
+    </div>
+  </div>
+  <div class="result-comment" id="result-comment">よくできました！</div>
+  <button class="btn-retry" onclick="retryGame()">もういちど！</button>
+  <button class="btn-home" onclick="goHome()">🏠 もどる</button>
+</div>
+
+<script>
+// ── Config ──
+const LEVELS = {
+  1: { target: 10, period: 8000,  missRate: 0.10, name: 'やさしい' },
+  2: { target: 20, period: 5000,  missRate: 0.25, name: 'ふつう' },
+  3: { target: 30, period: 3000,  missRate: 0.40, name: 'むずかしい' },
+  4: { target: 30, period: 1800,  missRate: 0.50, name: 'げきむず' },
+};
+
+const NETA_TYPES = ['maguro','tamago','ebi','salmon','ikura','avocado'];
+
+const GOOD_REACTIONS = [
+  { emoji: '😄', text: 'うまい！', cls: 'face-happy', textCls: 'good-text' },
+  { emoji: '🤩', text: 'Delicious!', cls: 'face-happy', textCls: 'good-text' },
+  { emoji: '😆', text: 'トレビアーン！', cls: 'face-happy', textCls: 'good-text' },
+  { emoji: '😍', text: 'さいこう！', cls: 'face-happy', textCls: 'good-text' },
+  { emoji: '🥳', text: 'いえーい！', cls: 'face-happy', textCls: 'good-text' },
+  { emoji: '😊', text: 'おいしい！', cls: 'face-happy', textCls: 'good-text' },
+];
+
+const BAD_REACTIONS = [
+  { emoji: '🥵', text: 'からい！！', cls: 'face-spicy', textCls: 'bad-text' },
+  { emoji: '🤯', text: 'あつい！！🔥', cls: 'face-hot', textCls: 'bad-text' },
+  { emoji: '🥶', text: 'つめたい！！❄️', cls: 'face-cold', textCls: 'bad-text' },
+  { emoji: '😨', text: 'おなかが〜💦', cls: 'face-sick', textCls: 'bad-text' },
+  { emoji: '😵', text: 'もうやめて〜', cls: 'face-spicy', textCls: 'bad-text' },
+];
+
+// ── State ──
+let currentLevel = 1;
+let goodCount = 0;
+let missCount = 0;
+let target = 10;
+let sushiItems = [];
+let animFrame = null;
+let spawnTimer = null;
+let reactionTimer = null;
+let isReacting = false;
+let gameActive = false;
+
+// ── Conveyor path math ──
+// Sushi travel along an elliptical path
+function getConveyorRect() {
+  const conv = document.getElementById('conveyor');
+  const rect = conv.getBoundingClientRect();
+  return rect;
+}
+
+// Parametric ellipse position (t: 0..1, clockwise)
+// rx/ry = semi-axes of the belt lane (80% of outer)
+function ellipsePos(t, cx, cy, rx, ry) {
+  const angle = t * Math.PI * 2 - Math.PI / 2; // start at top
+  return {
+    x: cx + rx * Math.cos(angle),
+    y: cy + ry * Math.sin(angle),
+  };
+}
+
+// ── Sushi creation ──
+let nextSushiId = 0;
+
+function createSushi() {
+  if (!gameActive) return;
+  const cfg = LEVELS[currentLevel];
+  const isBad = Math.random() < cfg.missRate;
+  const neta = NETA_TYPES[Math.floor(Math.random() * NETA_TYPES.length)];
+  const id = nextSushiId++;
+
+  const conveyor = document.getElementById('conveyor');
+  const el = document.createElement('div');
+  el.className = 'sushi-item';
+  el.id = 'sushi-' + id;
+  el.innerHTML = `
+    <div class="sushi-body">
+      <div class="sushi-neta neta-${neta}"></div>
+      <div class="sushi-nori"></div>
+      <div class="sushi-rice"></div>
+    </div>
+  `;
+  el.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    eatSushi(id, isBad);
+  });
+  conveyor.appendChild(el);
+
+  // Randomize starting position on the ellipse
+  const startT = Math.random();
+  sushiItems.push({ id, el, t: startT, isBad });
+}
+
+function removeSushi(id) {
+  sushiItems = sushiItems.filter(s => s.id !== id);
+  const el = document.getElementById('sushi-' + id);
+  if (el) el.remove();
+}
+
+// ── Animation loop ──
+let lastTime = null;
+
+function animateLoop(ts) {
+  if (!gameActive) return;
+  if (!lastTime) lastTime = ts;
+  const dt = ts - lastTime;
+  lastTime = ts;
+
+  const conveyor = document.getElementById('conveyor');
+  const rect = conveyor.getBoundingClientRect();
+  const cx = rect.width / 2;
+  const cy = rect.height / 2;
+  const rx = cx * 0.75; // lane radius X
+  const ry = cy * 0.72; // lane radius Y
+
+  const cfg = LEVELS[currentLevel];
+  const speed = 1 / cfg.period; // fraction per ms
+
+  for (const s of sushiItems) {
+    s.t = (s.t + speed * dt) % 1;
+    const pos = ellipsePos(s.t, cx, cy, rx, ry);
+    // Center the sushi element
+    s.el.style.left = (pos.x - 27) + 'px';
+    s.el.style.top  = (pos.y - 22) + 'px';
+
+    // Depth sort: items at bottom of oval appear in front
+    const depth = Math.sin(s.t * Math.PI * 2 - Math.PI / 2);
+    s.el.style.zIndex = Math.round((depth + 1) * 5) + 1;
+    // Subtle scale for depth
+    const scale = 0.85 + 0.2 * ((depth + 1) / 2);
+    s.el.style.transform = `scale(${scale})`;
+  }
+
+  animFrame = requestAnimationFrame(animateLoop);
+}
+
+// ── Spawn loop ──
+function scheduleSpawn() {
+  if (!gameActive) return;
+  // Keep 3-4 sushi on the belt
+  const count = sushiItems.length;
+  if (count < 4) createSushi();
+  const delay = 800 + Math.random() * 1200;
+  spawnTimer = setTimeout(scheduleSpawn, delay);
+}
+
+// ── Eat ──
+function eatSushi(id, isBad) {
+  if (!gameActive || isReacting) return;
+  removeSushi(id);
+  isReacting = true;
+  showReaction(isBad);
+  if (!isBad) {
+    goodCount++;
+    updateScore();
+    if (goodCount >= target) {
+      clearTimeout(spawnTimer);
+      // Short delay then show result
+      setTimeout(showResult, 900);
+    }
+  } else {
+    missCount++;
+    updateScore();
+  }
+}
+
+// ── Reaction ──
+function showReaction(isBad) {
+  const overlay = document.getElementById('reaction-overlay');
+  const face    = document.getElementById('reaction-face');
+  const emoji   = document.getElementById('reaction-emoji');
+  const text    = document.getElementById('reaction-text');
+
+  // Pick random reaction
+  const list = isBad ? BAD_REACTIONS : GOOD_REACTIONS;
+  const r = list[Math.floor(Math.random() * list.length)];
+
+  // Reset classes
+  face.className = 'face ' + r.cls;
+  emoji.textContent = r.emoji;
+  text.textContent  = r.text;
+  text.className    = 'reaction-text ' + r.textCls;
+
+  overlay.style.display = 'flex';
+
+  clearTimeout(reactionTimer);
+  reactionTimer = setTimeout(() => {
+    overlay.style.display = 'none';
+    isReacting = false;
+  }, 850);
+}
+
+// ── Score ──
+function updateScore() {
+  document.getElementById('score-good').textContent = `🍣 ${goodCount} / ${target}`;
+  document.getElementById('score-miss').textContent = `💥 ミス ${missCount}`;
+  const pct = (goodCount / target) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+// ── Start ──
+function startGame(level) {
+  currentLevel = level;
+  const cfg = LEVELS[level];
+  target    = cfg.target;
+  goodCount = 0;
+  missCount = 0;
+  sushiItems = [];
+  isReacting = false;
+  lastTime   = null;
+  nextSushiId = 0;
+
+  // Clear existing sushi
+  const conveyor = document.getElementById('conveyor');
+  conveyor.querySelectorAll('.sushi-item').forEach(e => e.remove());
+
+  updateScore();
+
+  document.getElementById('screen-title').style.display  = 'none';
+  document.getElementById('screen-result').style.display = 'none';
+  const gs = document.getElementById('screen-game');
+  gs.style.display = 'flex';
+
+  gameActive = true;
+  scheduleSpawn();
+  animFrame = requestAnimationFrame(animateLoop);
+}
+
+// ── Result ──
+function showResult() {
+  gameActive = false;
+  cancelAnimationFrame(animFrame);
+  clearTimeout(spawnTimer);
+  clearTimeout(reactionTimer);
+  document.getElementById('reaction-overlay').style.display = 'none';
+
+  document.getElementById('screen-game').style.display   = 'none';
+  const rs = document.getElementById('screen-result');
+  rs.style.display = 'flex';
+
+  document.getElementById('result-good').textContent = goodCount + 'こ';
+  document.getElementById('result-miss').textContent = missCount + 'こ';
+
+  // Comment
+  let comment = '';
+  if (missCount === 0) comment = '🏆 かんぺき！！すごすぎ！';
+  else if (missCount <= 2) comment = '🎉 とってもじょうず！';
+  else if (missCount <= 5) comment = '😄 よくがんばったね！';
+  else comment = '💪 つぎはもっとうまくなれる！';
+  document.getElementById('result-comment').textContent = comment;
+
+  // Confetti
+  launchConfetti();
+}
+
+function launchConfetti() {
+  const wrap = document.getElementById('confetti-wrap');
+  wrap.innerHTML = '';
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9f43','#ff6ff2'];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.top = '-10px';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDelay = Math.random() * 1.2 + 's';
+    p.style.animationDuration = (1.2 + Math.random() * 1) + 's';
+    p.style.transform = `rotate(${Math.random() * 360}deg)`;
+    wrap.appendChild(p);
+  }
+}
+
+// ── Navigation ──
+function retryGame() {
+  document.getElementById('confetti-wrap').innerHTML = '';
+  startGame(currentLevel);
+}
+
+function goHome() {
+  gameActive = false;
+  cancelAnimationFrame(animFrame);
+  clearTimeout(spawnTimer);
+  clearTimeout(reactionTimer);
+  document.getElementById('reaction-overlay').style.display = 'none';
+  document.getElementById('screen-game').style.display   = 'none';
+  document.getElementById('screen-result').style.display = 'none';
+  document.getElementById('screen-title').style.display  = 'flex';
+  // Clear sushi
+  document.getElementById('conveyor').querySelectorAll('.sushi-item').forEach(e => e.remove());
+  sushiItems = [];
+}
+</script>
+</body>
+</html>
