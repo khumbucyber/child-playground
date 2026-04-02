@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ボタン れんだ！</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; }
+
+html, body {
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  background: #110020;
+  color: white;
+}
+
+/* ── Flash overlay ── */
+#flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+@keyframes flashAnim {
+  0%   { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+/* ── Screens ── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+}
+.screen.hidden { display: none; }
+
+/* ── BG neon grid ── */
+.screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(180,0,255,0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,30,80,0.2) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.screen > * { position: relative; z-index: 1; }
+
+/* ════════════════ START SCREEN ════════════════ */
+#startScreen { gap: 20px; text-align: center; }
+
+.game-title {
+  font-size: 52px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 0 0 16px #ff2060, 0 0 40px #ff2060, 0 0 70px #ff2060;
+  animation: neonPulse 1.6s ease-in-out infinite;
+}
+@keyframes neonPulse {
+  0%,100% { text-shadow: 0 0 16px #ff2060, 0 0 40px #ff2060, 0 0 70px #ff2060; }
+  50%      { text-shadow: 0 0 24px #ff2060, 0 0 60px #ff2060, 0 0 100px #ff44aa; }
+}
+
+.game-sub {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffdd00;
+  text-shadow: 0 0 8px rgba(255,221,0,0.7);
+  letter-spacing: 1px;
+}
+
+.start-emoji { font-size: 64px; animation: bounce 0.8s ease-in-out infinite alternate; }
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+
+.start-btn {
+  padding: 22px 64px;
+  font-size: 30px;
+  font-weight: 900;
+  background: linear-gradient(140deg, #ff2060, #ff7000);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 10px 0 #8b0020, 0 0 40px rgba(255,32,96,0.7);
+  letter-spacing: 2px;
+  transition: transform 0.08s, box-shadow 0.08s;
+  font-family: inherit;
+}
+.start-btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 4px 0 #8b0020, 0 0 20px rgba(255,32,96,0.4);
+}
+
+.hint-text {
+  font-size: 13px;
+  color: #666;
+  font-weight: 700;
+}
+
+/* ════════════════ GAME SCREEN ════════════════ */
+#gameScreen { gap: 4px; justify-content: space-between; padding-top: 32px; }
+
+/* Timer */
+.timer-area { text-align: center; width: 100%; }
+.timer-label { font-size: 12px; color: #888; font-weight: 700; letter-spacing: 3px; }
+.timer-num {
+  font-size: 72px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.timer-num.danger {
+  color: #ff2060;
+  animation: dangerShake 0.08s linear infinite;
+  text-shadow: 0 0 16px #ff2060;
+}
+@keyframes dangerShake {
+  0%,100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
+/* Progress bar */
+.progress-wrap {
+  width: 100%;
+  height: 10px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff2060, #ffaa00);
+  border-radius: 5px;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 12px rgba(255,32,96,0.8);
+}
+
+/* Count */
+.count-area { text-align: center; }
+.count-label { font-size: 12px; color: #888; font-weight: 700; letter-spacing: 3px; }
+.count-num {
+  font-size: 96px;
+  font-weight: 900;
+  color: #ffdd00;
+  line-height: 1;
+  text-shadow: 0 0 24px rgba(255,221,0,0.7);
+  transition: transform 0.05s;
+}
+.count-num.bump { transform: scale(1.25); }
+
+/* Big button area */
+.btn-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.big-btn {
+  width: min(260px, 68vw);
+  height: min(260px, 68vw);
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #ff6688 0%, #ff2060 45%, #cc0040 100%);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 14px 0 #7a001a,
+    0 20px 50px rgba(255,32,96,0.6),
+    inset 0 -10px 24px rgba(0,0,0,0.35),
+    inset 0 10px 24px rgba(255,255,255,0.25);
+  transition: transform 0.06s cubic-bezier(.2,.8,.4,1), box-shadow 0.06s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.big-btn.pressed {
+  transform: translateY(10px) scale(0.93);
+  box-shadow:
+    0 4px 0 #7a001a,
+    0 6px 20px rgba(255,32,96,0.4),
+    inset 0 -4px 12px rgba(0,0,0,0.3),
+    inset 0 4px 12px rgba(255,255,255,0.2);
+}
+
+.btn-main-text {
+  font-size: 52px;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 4px 0 rgba(0,0,0,0.4);
+  line-height: 1;
+  pointer-events: none;
+}
+.btn-sub-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.75);
+  pointer-events: none;
+  margin-top: 4px;
+}
+
+/* ════════════════ RESULT SCREEN ════════════════ */
+#resultScreen { gap: 14px; text-align: center; }
+
+.result-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffdd00;
+  text-shadow: 0 0 16px rgba(255,221,0,0.7);
+  animation: neonPulse 1.6s ease-in-out infinite;
+}
+
+.result-rank { font-size: 72px; animation: rankIn 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes rankIn {
+  from { opacity:0; transform: scale(0.2) rotate(-20deg); }
+  to   { opacity:1; transform: scale(1) rotate(0deg); }
+}
+
+.result-score {
+  font-size: 110px;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255,255,255,0.5);
+  animation: scoreIn 0.4s cubic-bezier(.34,1.56,.64,1) 0.15s both;
+}
+@keyframes scoreIn {
+  from { opacity:0; transform: scale(0.5); }
+  to   { opacity:1; transform: scale(1); }
+}
+
+.result-unit {
+  font-size: 20px;
+  color: #aaa;
+  font-weight: 700;
+  margin-top: -8px;
+}
+
+.result-msg {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ff88aa;
+  text-shadow: 0 0 10px rgba(255,136,170,0.5);
+  line-height: 1.5;
+  white-space: pre-line;
+  animation: msgIn 0.4s ease 0.3s both;
+}
+@keyframes msgIn {
+  from { opacity:0; transform: translateY(16px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.replay-btn {
+  padding: 20px 56px;
+  font-size: 26px;
+  font-weight: 900;
+  background: linear-gradient(140deg, #ff2060, #ff7000);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #8b0020, 0 0 30px rgba(255,32,96,0.6);
+  touch-action: manipulation;
+  font-family: inherit;
+  letter-spacing: 1px;
+  animation: replayIn 0.4s ease 0.5s both;
+}
+@keyframes replayIn {
+  from { opacity:0; transform: translateY(20px) scale(0.9); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+.replay-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 #8b0020; }
+
+.home-link {
+  font-size: 15px;
+  font-weight: 700;
+  color: #666;
+  background: none;
+  border: 2px solid #444;
+  border-radius: 999px;
+  padding: 10px 28px;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+  animation: replayIn 0.4s ease 0.6s both;
+}
+
+/* ── Floating +1 ── */
+.float-num {
+  position: fixed;
+  font-size: 36px;
+  font-weight: 900;
+  color: #ffdd00;
+  text-shadow: 0 0 12px rgba(255,221,0,0.9);
+  pointer-events: none;
+  z-index: 150;
+  animation: floatUp 0.55s ease-out forwards;
+}
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-90px) scale(1.5); }
+}
+
+/* ── Emoji particles ── */
+.particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 150;
+  font-size: 28px;
+  animation: particleFly 0.75s ease-out forwards;
+}
+@keyframes particleFly {
+  0%   { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(0.2) rotate(var(--rot)); }
+}
+</style>
+</head>
+<body>
+
+<div id="flash"></div>
+
+<!-- ══════════ START SCREEN ══════════ -->
+<div id="startScreen" class="screen">
+  <div class="start-emoji">💥</div>
+  <div class="game-title">ボタン<br>れんだ！</div>
+  <div class="game-sub">10びょうで なんかい おせる？</div>
+  <button class="start-btn" id="startBtn">スタート！</button>
+  <div class="hint-text">おおきい ボタンを おしまくれ！</div>
+</div>
+
+<!-- ══════════ GAME SCREEN ══════════ -->
+<div id="gameScreen" class="screen hidden">
+  <div class="timer-area">
+    <div class="timer-label">のこり</div>
+    <div class="timer-num" id="timerNum">10</div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="count-area">
+    <div class="count-label">かいすう</div>
+    <div class="count-num" id="countNum">0</div>
+  </div>
+  <div class="btn-area">
+    <button class="big-btn" id="bigBtn">
+      <div class="btn-main-text">おせ！</div>
+      <div class="btn-sub-text">PUSH!!</div>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ RESULT SCREEN ══════════ -->
+<div id="resultScreen" class="screen hidden">
+  <div class="result-title">⏱ タイムアップ！</div>
+  <div class="result-rank" id="resultRank"></div>
+  <div class="result-score" id="resultScore">0</div>
+  <div class="result-unit">かい おした！</div>
+  <div class="result-msg" id="resultMsg"></div>
+  <button class="replay-btn" id="replayBtn">もう1かい！</button>
+  <button class="home-link" id="homeBtn">← メニューへ</button>
+</div>
+
+<script>
+'use strict';
+
+/* ──────────── Audio ──────────── */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playPop(count) {
+  try {
+    const ctx = ensureAudio();
+    const now = ctx.currentTime;
+
+    // Punchy thud: noise burst + tonal drop
+    const bufLen = Math.floor(ctx.sampleRate * 0.025);
+    const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/bufLen, 1.5);
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.35;
+    noise.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+
+    // Tonal thump
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    // Pitch rises slightly every 5 presses for excitement
+    const baseFreq = 160 + (count % 5) * 14;
+    osc.frequency.setValueAtTime(baseFreq * 2.2, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, now + 0.09);
+    osc.type = 'sine';
+    oscGain.gain.setValueAtTime(0.45, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.11);
+  } catch(e) {}
+}
+
+function playEndFanfare() {
+  try {
+    const ctx = ensureAudio();
+    const now = ctx.currentTime;
+    [[0, 523], [0.12, 659], [0.24, 784], [0.36, 1047]].forEach(([t, f]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.frequency.value = f;
+      osc.type = 'square';
+      g.gain.setValueAtTime(0.18, now+t);
+      g.gain.exponentialRampToValueAtTime(0.001, now+t+0.18);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(now+t); osc.stop(now+t+0.2);
+    });
+  } catch(e) {}
+}
+
+/* ──────────── Vibrate ──────────── */
+function buzz(ms) {
+  try { navigator.vibrate && navigator.vibrate(ms); } catch(e) {}
+}
+
+/* ──────────── Game state ──────────── */
+let count = 0;
+let timeLeft = 10.0;
+let running = false;
+let timerId = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+/* ──────────── Start ──────────── */
+function startGame() {
+  count = 0;
+  timeLeft = 10.0;
+  running = false;
+
+  const countEl = document.getElementById('countNum');
+  const timerEl = document.getElementById('timerNum');
+  countEl.textContent = '0';
+  countEl.classList.remove('bump');
+  timerEl.textContent = '10';
+  timerEl.classList.remove('danger');
+  document.getElementById('progressFill').style.width = '100%';
+
+  showScreen('gameScreen');
+
+  // Brief "ready" delay so layout settles
+  setTimeout(() => {
+    running = true;
+    timerId = setInterval(tick, 100);
+  }, 50);
+}
+
+function tick() {
+  timeLeft = Math.max(0, timeLeft - 0.1);
+  const pct = (timeLeft / 10) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  const secs = Math.ceil(timeLeft);
+  const timerEl = document.getElementById('timerNum');
+  timerEl.textContent = secs;
+  if (secs <= 3) timerEl.classList.add('danger');
+
+  if (timeLeft <= 0) endGame();
+}
+
+/* ──────────── End ──────────── */
+function endGame() {
+  clearInterval(timerId);
+  running = false;
+  playEndFanfare();
+  buzz([100, 50, 100, 50, 200]);
+  setTimeout(showResult, 300);
+}
+
+const RANKS = [
+  { min:60, rank:'🤖', msg:'ロボット？！\nありえないほど はやい！！' },
+  { min:48, rank:'👾', msg:'うそでしょ！！\nゆびが みえない！！' },
+  { min:38, rank:'🚀', msg:'はやすぎる！！\nもはや ひとじゃない！！' },
+  { min:28, rank:'⚡', msg:'めちゃくちゃ\nすごい！！！' },
+  { min:20, rank:'🔥', msg:'すごい！\nゆびが はやい！' },
+  { min:13, rank:'🐇', msg:'なかなか\nやるね！' },
+  { min: 6, rank:'🐢', msg:'もっとはやく\nおせるよ！' },
+  { min: 0, rank:'🐌', msg:'もしかして\nねてたの？' },
+];
+
+function showResult() {
+  const r = RANKS.find(r => count >= r.min) || RANKS[RANKS.length-1];
+  document.getElementById('resultRank').textContent = r.rank;
+  document.getElementById('resultScore').textContent = count;
+  document.getElementById('resultMsg').textContent = r.msg;
+  showScreen('resultScreen');
+  spawnResultParticles();
+}
+
+function spawnResultParticles() {
+  const emojis = ['🎉','✨','💥','⭐','🔥','💫'];
+  for (let i = 0; i < 12; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'particle';
+      el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      const x = Math.random() * window.innerWidth;
+      const y = Math.random() * window.innerHeight * 0.6 + window.innerHeight * 0.1;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 80 + Math.random() * 120;
+      el.style.setProperty('--dx', Math.cos(angle)*dist + 'px');
+      el.style.setProperty('--dy', Math.sin(angle)*dist + 'px');
+      el.style.setProperty('--rot', (Math.random()*360) + 'deg');
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+      el.style.fontSize = (20 + Math.random()*16) + 'px';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 800);
+    }, i * 60);
+  }
+}
+
+/* ──────────── Button press ──────────── */
+function onPress(e) {
+  e.preventDefault();
+  if (!running) return;
+
+  count++;
+
+  // Sound + vibration
+  playPop(count);
+  buzz(28);
+
+  // Counter
+  const countEl = document.getElementById('countNum');
+  countEl.textContent = count;
+  countEl.classList.remove('bump');
+  void countEl.offsetWidth;
+  countEl.classList.add('bump');
+  setTimeout(() => countEl.classList.remove('bump'), 90);
+
+  // Screen flash
+  const flash = document.getElementById('flash');
+  flash.style.animation = 'none';
+  void flash.offsetWidth;
+  flash.style.animation = 'flashAnim 0.1s ease-out forwards';
+
+  // Floating +1 near touch point
+  const el = document.createElement('div');
+  el.className = 'float-num';
+  el.textContent = '+1';
+  const cx = (e.clientX ?? window.innerWidth/2) + (Math.random()*30 - 15);
+  const cy = (e.clientY ?? window.innerHeight/2) - 10;
+  el.style.left = cx + 'px';
+  el.style.top  = cy + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 600);
+
+  // Button press visual
+  const btn = document.getElementById('bigBtn');
+  btn.classList.add('pressed');
+  setTimeout(() => btn.classList.remove('pressed'), 90);
+
+  // Milestone particles every 10 presses
+  if (count % 10 === 0) {
+    const rect = btn.getBoundingClientRect();
+    const bcx = rect.left + rect.width/2;
+    const bcy = rect.top + rect.height/2;
+    const pEmojis = ['💥','⚡','✨','🔥','💫','🌟'];
+    for (let i = 0; i < 8; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = pEmojis[i % pEmojis.length];
+      const a = (i/8) * Math.PI * 2;
+      const d = 70 + Math.random()*60;
+      p.style.setProperty('--dx', Math.cos(a)*d + 'px');
+      p.style.setProperty('--dy', Math.sin(a)*d + 'px');
+      p.style.setProperty('--rot', (Math.random()*720-360) + 'deg');
+      p.style.left = (bcx-14) + 'px';
+      p.style.top  = (bcy-14) + 'px';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 800);
+    }
+    buzz([40, 20, 40]);
+  }
+}
+
+/* ──────────── Event listeners ──────────── */
+document.getElementById('startBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  ensureAudio();
+  startGame();
+});
+
+document.getElementById('bigBtn').addEventListener('pointerdown', onPress);
+
+document.getElementById('replayBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  startGame();
+});
+
+document.getElementById('homeBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  location.href = './index.html';
+});
+</script>
+</body>
+</html>
