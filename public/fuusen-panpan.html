@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ふうせん ぱんぱん！</title>
+<style>
+* {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+html, body {
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  background: linear-gradient(180deg, #5ec4f5 0%, #90d8ff 45%, #c8f0ff 100%);
+}
+
+/* ── Screens ── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+}
+.screen.hidden { display: none; }
+
+/* ════════ START SCREEN ════════ */
+#startScreen { gap: 18px; text-align: center; }
+
+.game-title {
+  font-size: 52px;
+  font-weight: 900;
+  color: #1a3a6e;
+  text-shadow: 0 4px 0 rgba(255,255,255,0.85), 0 8px 20px rgba(0,0,0,0.1);
+  line-height: 1.1;
+  letter-spacing: 3px;
+}
+
+.balloon-deco {
+  font-size: 90px;
+  animation: floatBig 2.4s ease-in-out infinite alternate;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.18));
+}
+@keyframes floatBig {
+  from { transform: translateY(0) rotate(-6deg); }
+  to   { transform: translateY(-18px) rotate(6deg); }
+}
+
+.game-sub {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a5a9e;
+  line-height: 1.6;
+}
+
+.start-btn {
+  padding: 22px 60px;
+  font-size: 30px;
+  font-weight: 900;
+  background: linear-gradient(140deg, #ff5599, #ff8822);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #cc2255, 0 0 36px rgba(255,85,153,0.5);
+  font-family: inherit;
+  letter-spacing: 2px;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.start-btn:active {
+  transform: translateY(7px);
+  box-shadow: 0 1px 0 #cc2255, 0 0 12px rgba(255,85,153,0.3);
+}
+
+.hint-text {
+  font-size: 14px;
+  color: #2255aa;
+  font-weight: 700;
+}
+
+/* ════════ GAME SCREEN ════════ */
+#gameScreen {
+  justify-content: flex-start;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  gap: 0;
+}
+
+.hud {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 10px;
+  flex-shrink: 0;
+}
+
+.hud-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a5a9e;
+  white-space: nowrap;
+}
+
+.timer-bar-wrap {
+  flex: 1;
+  height: 14px;
+  background: rgba(0,0,0,0.12);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.timer-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff4466, #ffcc00);
+  border-radius: 7px;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 10px rgba(255,68,102,0.5);
+}
+
+.score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 62px;
+}
+.score-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1a5a9e;
+}
+.score-num {
+  font-size: 30px;
+  font-weight: 900;
+  color: #1a3a6e;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+  transition: transform 0.06s;
+}
+.score-num.bump { transform: scale(1.35); }
+
+/* Play area */
+#playArea {
+  flex: 1;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Balloon ── */
+.balloon-wrap {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  will-change: top;
+}
+
+.balloon-body {
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+/* highlight shine */
+.balloon-body::before {
+  content: '';
+  position: absolute;
+  top: 16%;
+  left: 22%;
+  width: 28%;
+  height: 22%;
+  background: rgba(255,255,255,0.55);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+  pointer-events: none;
+}
+/* bottom tip */
+.balloon-body::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.balloon-knot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: -2px;
+  flex-shrink: 0;
+}
+
+.balloon-string {
+  width: 2px;
+  border-radius: 1px;
+  background: rgba(0,0,0,0.22);
+  flex-shrink: 0;
+}
+
+/* special golden glow */
+.balloon-wrap.special .balloon-body {
+  animation: goldGlow 0.6s ease-in-out infinite alternate;
+}
+@keyframes goldGlow {
+  from { filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)); }
+  to   { filter: drop-shadow(0 0 18px rgba(255,215,0,1.0)); }
+}
+
+.balloon-star {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1em;
+  pointer-events: none;
+}
+
+/* pop burst */
+@keyframes popBurst {
+  0%   { transform: scale(1);   opacity: 1; }
+  35%  { transform: scale(1.5); opacity: 0.7; }
+  100% { transform: scale(0);   opacity: 0; }
+}
+.balloon-wrap.popping {
+  animation: popBurst 0.14s ease-out forwards;
+  pointer-events: none;
+}
+
+/* ── Particles / Text ── */
+.particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 300;
+  animation: particleFly 0.65s ease-out forwards;
+}
+@keyframes particleFly {
+  0%   { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(0.3) rotate(var(--rot)); }
+}
+
+.pop-label {
+  position: fixed;
+  pointer-events: none;
+  z-index: 300;
+  font-size: 34px;
+  font-weight: 900;
+  color: #ff2244;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.9), 0 0 12px rgba(255,34,68,0.4);
+  animation: popLabelAnim 0.55s ease-out forwards;
+}
+@keyframes popLabelAnim {
+  0%   { opacity: 1; transform: scale(0.6) translateY(0); }
+  25%  { opacity: 1; transform: scale(1.25) translateY(-10px); }
+  100% { opacity: 0; transform: scale(1.0) translateY(-50px); }
+}
+
+/* screen shake */
+@keyframes screenShake {
+  0%,100% { transform: translate(0, 0); }
+  20%      { transform: translate(-5px, 2px); }
+  45%      { transform: translate(5px, -3px); }
+  70%      { transform: translate(-3px, 4px); }
+  85%      { transform: translate(3px, -2px); }
+}
+#gameScreen.shake { animation: screenShake 0.22s ease; }
+
+/* ════════ RESULT SCREEN ════════ */
+#resultScreen { gap: 14px; text-align: center; }
+
+.result-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: #1a3a6e;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.85);
+}
+
+.result-rank {
+  font-size: 80px;
+  animation: rankIn 0.5s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes rankIn {
+  from { opacity:0; transform: scale(0.15) rotate(-25deg); }
+  to   { opacity:1; transform: scale(1) rotate(0deg); }
+}
+
+.result-score-wrap { animation: scoreIn 0.4s cubic-bezier(.34,1.56,.64,1) 0.15s both; }
+@keyframes scoreIn {
+  from { opacity:0; transform: scale(0.4); }
+  to   { opacity:1; transform: scale(1); }
+}
+
+.result-score {
+  font-size: 108px;
+  font-weight: 900;
+  color: #ff3366;
+  line-height: 1;
+  text-shadow: 0 7px 0 #cc1144, 0 0 40px rgba(255,51,102,0.4);
+}
+.result-unit {
+  font-size: 18px;
+  color: #2255aa;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.result-msg {
+  font-size: 20px;
+  font-weight: 900;
+  color: #1a3a6e;
+  line-height: 1.7;
+  white-space: pre-line;
+  animation: msgIn 0.4s ease 0.3s both;
+}
+@keyframes msgIn {
+  from { opacity:0; transform: translateY(18px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.replay-btn {
+  padding: 20px 52px;
+  font-size: 26px;
+  font-weight: 900;
+  background: linear-gradient(140deg, #ff5599, #ff8822);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #cc2255, 0 0 30px rgba(255,85,153,0.45);
+  font-family: inherit;
+  letter-spacing: 1px;
+  animation: replayIn 0.4s ease 0.5s both;
+}
+@keyframes replayIn {
+  from { opacity:0; transform: translateY(22px) scale(0.88); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+.replay-btn:active { transform: translateY(6px); box-shadow: 0 2px 0 #cc2255; }
+
+.home-link {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2255aa;
+  background: rgba(255,255,255,0.55);
+  border: 2px solid #aad0ee;
+  border-radius: 999px;
+  padding: 10px 30px;
+  cursor: pointer;
+  font-family: inherit;
+  animation: replayIn 0.4s ease 0.62s both;
+}
+.home-link:active { opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ START SCREEN ══════════ -->
+<div id="startScreen" class="screen">
+  <div class="balloon-deco">🎈</div>
+  <div class="game-title">ふうせん<br>ぱんぱん！</div>
+  <div class="game-sub">ふうせんを タップして<br>わってみよう！</div>
+  <button class="start-btn" id="startBtn">スタート！</button>
+  <div class="hint-text">30びょうで なんこ われる？</div>
+</div>
+
+<!-- ══════════ GAME SCREEN ══════════ -->
+<div id="gameScreen" class="screen hidden">
+  <div class="hud">
+    <div class="hud-label">のこり</div>
+    <div class="timer-bar-wrap">
+      <div class="timer-bar-fill" id="timerFill"></div>
+    </div>
+    <div class="score-box">
+      <div class="score-label">スコア</div>
+      <div class="score-num" id="scoreNum">0</div>
+    </div>
+  </div>
+  <div id="playArea"></div>
+</div>
+
+<!-- ══════════ RESULT SCREEN ══════════ -->
+<div id="resultScreen" class="screen hidden">
+  <div class="result-title">⏱ タイムアップ！</div>
+  <div class="result-rank" id="resultRank"></div>
+  <div class="result-score-wrap">
+    <div class="result-score" id="resultScore">0</div>
+    <div class="result-unit">こ わった！</div>
+  </div>
+  <div class="result-msg" id="resultMsg"></div>
+  <button class="replay-btn" id="replayBtn">もう1かい！</button>
+  <button class="home-link" id="homeBtn">← メニューへ</button>
+</div>
+
+<script>
+'use strict';
+
+/* ─── Audio ─── */
+let audioCtx = null;
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playPop(isSpecial) {
+  try {
+    const ctx = ensureAudio();
+    const now = ctx.currentTime;
+
+    // Sharp noise burst — the "パン！"
+    const bufLen = Math.floor(ctx.sampleRate * 0.055);
+    const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufLen, 1.6) * 1.8;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(isSpecial ? 1.8 : 1.2, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+    noise.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+
+    // Rubbery frequency sweep for balloon character
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.frequency.setValueAtTime(isSpecial ? 1400 : 980, now);
+    osc.frequency.exponentialRampToValueAtTime(70, now + 0.09);
+    osc.type = 'sawtooth';
+    oscGain.gain.setValueAtTime(isSpecial ? 0.65 : 0.45, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.11);
+  } catch (e) {}
+}
+
+function playFanfare() {
+  try {
+    const ctx = ensureAudio();
+    const now = ctx.currentTime;
+    [[0, 523], [0.11, 659], [0.22, 784], [0.34, 1047]].forEach(([t, f]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.frequency.value = f;
+      osc.type = 'square';
+      g.gain.setValueAtTime(0.16, now + t);
+      g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.18);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(now + t); osc.stop(now + t + 0.2);
+    });
+  } catch (e) {}
+}
+
+/* ─── Vibration ─── */
+function buzz(pattern) {
+  try { navigator.vibrate && navigator.vibrate(pattern); } catch (e) {}
+}
+
+/* ─── Screen helpers ─── */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function triggerShake() {
+  const gs = document.getElementById('gameScreen');
+  gs.classList.remove('shake');
+  void gs.offsetWidth;
+  gs.classList.add('shake');
+  setTimeout(() => gs.classList.remove('shake'), 240);
+}
+
+/* ─── Balloon palette ─── */
+const COLORS = [
+  { body: '#ff4466', tip: '#cc1133' },
+  { body: '#4488ff', tip: '#2255cc' },
+  { body: '#ffcc00', tip: '#cc8800' },
+  { body: '#44cc66', tip: '#229944' },
+  { body: '#bb44ff', tip: '#8811cc' },
+  { body: '#ff8833', tip: '#cc5511' },
+  { body: '#ff66cc', tip: '#cc2299' },
+  { body: '#44ddcc', tip: '#119988' },
+];
+const SPECIAL = { body: '#ffd700', tip: '#cc8800' };
+
+/* ─── Game state ─── */
+const DURATION = 30;
+let balloons = [];
+let score = 0;
+let timeLeft = DURATION;
+let running = false;
+let lastTs = 0;
+let spawnCooldown = 0;
+let rafId = null;
+let uidCounter = 0;
+
+function spawnInterval(elapsed) {
+  // 1500ms → 680ms over 30 s
+  return 1500 - (elapsed / DURATION) * 820;
+}
+
+function balloonSpeed(elapsed, areaH) {
+  // 10% → 22% of area height per second
+  return areaH * (0.10 + (elapsed / DURATION) * 0.12);
+}
+
+/* ─── Spawn one balloon ─── */
+function spawnBalloon(elapsed) {
+  const area = document.getElementById('playArea');
+  const pw = area.clientWidth;
+  const ph = area.clientHeight;
+  if (pw === 0 || ph === 0) return;
+
+  const isSpecial = Math.random() < 0.10;
+  const col = isSpecial ? SPECIAL : COLORS[Math.floor(Math.random() * COLORS.length)];
+  const size = 52 + Math.floor(Math.random() * 30);
+  const stringH = 18 + Math.floor(Math.random() * 20);
+  const totalH = size + 10 + stringH;
+
+  const id = ++uidCounter;
+  const x = size / 2 + Math.random() * (pw - size);
+  let y = ph + totalH;
+  const spd = balloonSpeed(elapsed, ph) * (0.78 + Math.random() * 0.44);
+
+  // DOM
+  const wrap = document.createElement('div');
+  wrap.className = 'balloon-wrap' + (isSpecial ? ' special' : '');
+  wrap.dataset.uid = id;
+  wrap.style.cssText = `left:${x - size / 2}px; top:${y}px; width:${size}px;`;
+
+  const body = document.createElement('div');
+  body.className = 'balloon-body';
+  body.style.cssText = `width:${size}px; height:${size}px; background:${col.body};`;
+  body.style.setProperty('--tip', col.tip);
+
+  // bottom triangle via border-top color
+  const styleTag = document.createElement('style');
+  styleTag.textContent =
+    `[data-uid="${id}"] .balloon-body::after { border-top-color: ${col.body}; }`;
+  document.head.appendChild(styleTag);
+
+  if (isSpecial) {
+    const star = document.createElement('div');
+    star.className = 'balloon-star';
+    star.style.fontSize = Math.round(size * 0.42) + 'px';
+    star.textContent = '⭐';
+    body.appendChild(star);
+  }
+
+  const knot = document.createElement('div');
+  knot.className = 'balloon-knot';
+  knot.style.background = col.tip;
+
+  const str = document.createElement('div');
+  str.className = 'balloon-string';
+  str.style.height = stringH + 'px';
+
+  wrap.appendChild(body);
+  wrap.appendChild(knot);
+  wrap.appendChild(str);
+  area.appendChild(wrap);
+
+  wrap.addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    popBalloon(id, ev.clientX, ev.clientY);
+  });
+
+  balloons.push({ id, el: wrap, styleEl: styleTag, y, spd, size, totalH, isSpecial, popping: false });
+}
+
+/* ─── Pop ─── */
+function popBalloon(id, cx, cy) {
+  if (!running) return;
+  const idx = balloons.findIndex(b => b.id === id);
+  if (idx === -1) return;
+  const b = balloons[idx];
+  if (b.popping) return;
+  b.popping = true;
+
+  // Score
+  score += b.isSpecial ? 3 : 1;
+  const scoreEl = document.getElementById('scoreNum');
+  scoreEl.textContent = score;
+  scoreEl.classList.remove('bump');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('bump');
+  setTimeout(() => scoreEl.classList.remove('bump'), 100);
+
+  // Sound + vibration + shake
+  playPop(b.isSpecial);
+  buzz(b.isSpecial ? [25, 15, 40] : 28);
+  triggerShake();
+
+  // "パン！" label
+  const lbl = document.createElement('div');
+  lbl.className = 'pop-label';
+  lbl.textContent = b.isSpecial ? '✨パン！' : 'パン！';
+  lbl.style.left = (cx - 44) + 'px';
+  lbl.style.top  = (cy - 28) + 'px';
+  document.body.appendChild(lbl);
+  setTimeout(() => lbl.remove(), 580);
+
+  // Confetti particles
+  const emojis = b.isSpecial
+    ? ['🌟', '✨', '🎉', '🎈', '💫', '🌈', '⭐', '💛']
+    : ['🎈', '✨', '💥', '🌈', '💫', '🎉'];
+  const count = b.isSpecial ? 9 : 5;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = emojis[i % emojis.length];
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.8;
+    const dist = 45 + Math.random() * 70;
+    p.style.cssText = `left:${cx - 12}px; top:${cy - 12}px; font-size:${18 + Math.random() * 14}px;`;
+    p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    p.style.setProperty('--rot', (Math.random() * 520 - 260) + 'deg');
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+
+  // Pop animation then remove
+  b.el.classList.add('popping');
+  setTimeout(() => {
+    b.el.remove();
+    b.styleEl.remove();
+    const i2 = balloons.findIndex(x => x.id === id);
+    if (i2 !== -1) balloons.splice(i2, 1);
+  }, 150);
+}
+
+/* ─── Game loop ─── */
+function loop(ts) {
+  if (!running) return;
+  if (!lastTs) lastTs = ts;
+  const dt = Math.min(ts - lastTs, 50);
+  lastTs = ts;
+
+  // Timer
+  timeLeft = Math.max(0, timeLeft - dt / 1000);
+  document.getElementById('timerFill').style.width = (timeLeft / DURATION * 100) + '%';
+  if (timeLeft <= 0) { endGame(); return; }
+
+  const elapsed = DURATION - timeLeft;
+
+  // Move balloons upward
+  for (let i = balloons.length - 1; i >= 0; i--) {
+    const b = balloons[i];
+    if (b.popping) continue;
+    b.y -= b.spd * dt / 1000;
+    b.el.style.top = b.y + 'px';
+    if (b.y < -(b.totalH + 10)) {
+      b.el.remove();
+      b.styleEl.remove();
+      balloons.splice(i, 1);
+    }
+  }
+
+  // Spawn
+  spawnCooldown -= dt;
+  if (spawnCooldown <= 0) {
+    spawnBalloon(elapsed);
+    spawnCooldown = spawnInterval(elapsed);
+  }
+
+  rafId = requestAnimationFrame(loop);
+}
+
+/* ─── Start ─── */
+function startGame() {
+  if (rafId) cancelAnimationFrame(rafId);
+  balloons.forEach(b => { b.el.remove(); b.styleEl.remove(); });
+  balloons = [];
+  score = 0;
+  timeLeft = DURATION;
+  lastTs = 0;
+  spawnCooldown = 0;
+  uidCounter = 0;
+
+  document.getElementById('scoreNum').textContent = '0';
+  document.getElementById('timerFill').style.width = '100%';
+  document.getElementById('gameScreen').classList.remove('shake');
+
+  showScreen('gameScreen');
+
+  running = true;
+  setTimeout(() => {
+    spawnBalloon(0);
+    spawnCooldown = spawnInterval(0);
+    rafId = requestAnimationFrame(loop);
+  }, 120);
+}
+
+/* ─── End ─── */
+function endGame() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  balloons.forEach(b => { b.el.remove(); b.styleEl.remove(); });
+  balloons = [];
+  playFanfare();
+  buzz([100, 50, 100, 50, 200]);
+  setTimeout(showResult, 420);
+}
+
+/* ─── Result ─── */
+const RANKS = [
+  { min: 50, rank: '🏆', msg: 'スーパーチャンピオン！\nぜったい ゆびが はやすぎる！！' },
+  { min: 35, rank: '🥇', msg: 'チャンピオン！\nたくさん わったね！すごい！！' },
+  { min: 22, rank: '🥈', msg: 'すごい！\nたくさん われたね！' },
+  { min: 13, rank: '🥉', msg: 'なかなか\nじょうずだよ！' },
+  { min:  6, rank: '🎈', msg: 'もっとはやく\nタップしてみよう！' },
+  { min:  0, rank: '🌱', msg: 'つぎは もっと\nがんばれ！' },
+];
+
+function showResult() {
+  const r = RANKS.find(r => score >= r.min) || RANKS[RANKS.length - 1];
+  document.getElementById('resultRank').textContent = r.rank;
+  document.getElementById('resultScore').textContent = score;
+  document.getElementById('resultMsg').textContent = r.msg;
+  showScreen('resultScreen');
+  burstParticles();
+}
+
+function burstParticles() {
+  const emojis = ['🎈', '✨', '🎉', '⭐', '💥', '🌈', '💫'];
+  for (let i = 0; i < 15; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      const x = Math.random() * window.innerWidth;
+      const y = window.innerHeight * (0.1 + Math.random() * 0.5);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 80 + Math.random() * 130;
+      p.style.cssText = `left:${x}px; top:${y}px; font-size:${20 + Math.random() * 18}px;`;
+      p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+      p.style.setProperty('--rot', (Math.random() * 540 - 270) + 'deg');
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 750);
+    }, i * 65);
+  }
+}
+
+/* ─── Event listeners ─── */
+document.getElementById('startBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  ensureAudio();
+  startGame();
+});
+
+document.getElementById('replayBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  startGame();
+});
+
+document.getElementById('homeBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  location.href = './index.html';
+});
+</script>
+</body>
+</html>
