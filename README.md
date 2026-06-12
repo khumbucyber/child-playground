@@ -31,7 +31,8 @@ child-playground/
     ├── marubatsu.html      # まるばつゲーム
     ├── baseball.html       # バッティング
     ├── memory-game.html    # しんけいすいじゃく
-    └── okaimono.html       # おかいもの ゲーム
+    ├── okaimono.html       # おかいもの ゲーム
+    └── rubik.html          # ルービックキューブ
 ```
 
 > 新しいコンテンツは `.html` ファイルを追加し、`index.html` のカードを更新するだけで拡充できます。
@@ -54,6 +55,7 @@ child-playground/
 | `baseball.html` | ⚾ バッティング | ✅ 公開中 | 5歳〜小1 |
 | `memory-game.html` | 🧠 しんけいすいじゃく | ✅ 公開中 | 4〜6歳 |
 | `okaimono.html` | 🪙 おかいもの ゲーム | ✅ 公開中 | 5歳〜小1 |
+| `rubik.html` | 🟦 ルービックキューブ | ✅ 公開中 | 5歳〜小学生 |
 
 ---
 
