@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ルービックキューブ 🟦</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #2a1f4e; }
+
+* {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+html, body {
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Nunito', 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Kosugi Maru', sans-serif;
+  background: linear-gradient(160deg, #c4e8ff 0%, #e8d4ff 55%, #ffd4ec 100%);
+}
+
+/* ─── Screens ─── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+}
+.screen.hidden { display: none; }
+
+/* ════════ TITLE SCREEN ════════ */
+#screen-title {
+  justify-content: center;
+  gap: 22px;
+  text-align: center;
+}
+.title-icon {
+  font-size: 70px;
+  animation: bounce 1.8s ease-in-out infinite;
+}
+@keyframes bounce {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-16px); }
+}
+.title-text {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.3;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.75);
+}
+.title-sub {
+  font-size: 14px;
+  color: #6a5a8a;
+  font-weight: 700;
+}
+
+.size-row {
+  display: flex;
+  gap: 14px;
+}
+.btn-size {
+  border: none;
+  border-radius: 20px;
+  padding: 18px 22px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  color: #4a3a6a;
+  background: #fff;
+  cursor: pointer;
+  min-width: 120px;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.1), 0 8px 20px rgba(0,0,0,0.08);
+  transition: transform 0.12s, box-shadow 0.12s, background 0.15s, color 0.15s;
+}
+.btn-size span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 4px;
+  opacity: 0.7;
+}
+.btn-size.active {
+  background: linear-gradient(135deg, #8a6aff, #c4b0ff);
+  color: #fff;
+}
+.btn-size:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+}
+
+.btn-start {
+  border: none;
+  border-radius: 22px;
+  padding: 18px 48px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 900;
+  color: #003a2e;
+  background: linear-gradient(135deg, #5edbb8, #2ab890);
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.13), 0 8px 20px rgba(0,0,0,0.1);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.btn-start:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.13);
+}
+
+/* ════════ GAME SCREEN ════════ */
+#screen-game {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+header {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 4px 8px;
+}
+
+.btn-icon {
+  border: none;
+  border-radius: 14px;
+  width: 44px; height: 44px;
+  font-size: 20px;
+  font-weight: 900;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.1), 0 6px 14px rgba(0,0,0,0.08);
+}
+.btn-icon:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.1); }
+
+.stat-group {
+  display: flex;
+  gap: 8px;
+}
+.stat {
+  background: #fff;
+  border-radius: 14px;
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.08), 0 6px 14px rgba(0,0,0,0.06);
+  white-space: nowrap;
+}
+
+/* ─── 3D Cube ─── */
+#cube-scene {
+  flex: 1;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1100px;
+  touch-action: none;
+}
+#cube-group {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(-25deg) rotateY(35deg);
+}
+.cubie {
+  position: absolute;
+  top: 0; left: 0;
+  transform-style: preserve-3d;
+}
+.face {
+  position: absolute;
+  top: 0; left: 0;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 4px rgba(0,0,0,0.16), inset 0 -6px 10px rgba(0,0,0,0.08);
+  backface-visibility: hidden;
+}
+.rotor {
+  position: absolute;
+  top: 0; left: 0;
+  transform-style: preserve-3d;
+}
+
+/* ─── Controls ─── */
+.controls {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  gap: 12px;
+  padding: 10px 4px;
+}
+.btn-action {
+  flex: 1;
+  border: none;
+  border-radius: 18px;
+  padding: 14px 10px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.12), 0 7px 16px rgba(0,0,0,0.08);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.btn-action:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.12);
+}
+.btn-shuffle { background: linear-gradient(135deg, #ffe066, #ffb830); color: #5a3800; }
+.btn-reset   { background: linear-gradient(135deg, #c4b0ff, #8a6aff); color: #1a004a; }
+
+.hint {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6a5a8a;
+  text-align: center;
+  padding-bottom: 4px;
+}
+
+/* ════════ WIN OVERLAY ════════ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 20, 60, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.overlay.hidden { display: none; }
+
+.win-card {
+  background: #fff;
+  border-radius: 28px;
+  padding: 36px 28px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 320px;
+  position: relative;
+  z-index: 2;
+  animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.win-emoji {
+  font-size: 60px;
+  animation: bounce 1s ease-in-out infinite;
+}
+.win-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.win-stats {
+  font-size: 16px;
+  font-weight: 800;
+  color: #6a5a8a;
+}
+.win-buttons {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.win-buttons .btn-action { font-size: 14px; padding: 14px 8px; }
+
+.confetti-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+.confetti {
+  position: absolute;
+  top: -40px;
+  font-size: 26px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  to { transform: translateY(110vh) rotate(540deg); opacity: 0.3; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ TITLE SCREEN ════════ -->
+<div class="screen" id="screen-title">
+  <div class="title-icon">🟦</div>
+  <h1 class="title-text">ルービック<br>キューブ</h1>
+  <p class="title-sub">サイズを えらんでね</p>
+  <div class="size-row">
+    <button class="btn-size active" data-size="3">3×3<br><span>ほんかく</span></button>
+    <button class="btn-size" data-size="2">2×2<br><span>かんたん</span></button>
+  </div>
+  <button class="btn-start" id="btnStart">はじめる ▶</button>
+</div>
+
+<!-- ════════ GAME SCREEN ════════ -->
+<div class="screen hidden" id="screen-game">
+  <header>
+    <button class="btn-icon" id="btnBack">←</button>
+    <div class="stat-group">
+      <div class="stat">🕐 <span id="timeLabel">0:00</span></div>
+      <div class="stat">👆 <span id="moveLabel">0</span></div>
+    </div>
+  </header>
+
+  <div id="cube-scene">
+    <div id="cube-group"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-action btn-shuffle" id="btnShuffle">🔀 シャッフル</button>
+    <button class="btn-action btn-reset" id="btnReset">↺ リセット</button>
+  </div>
+  <p class="hint">はいけいを なぞって まわす・めんを フリックして 1れつ まわす</p>
+</div>
+
+<!-- ════════ WIN OVERLAY ════════ -->
+<div class="overlay hidden" id="winOverlay">
+  <div class="win-card">
+    <div class="win-emoji">🎉</div>
+    <div class="win-title">やったね！<br>そろった！</div>
+    <div class="win-stats">⏱ <span id="winTime"></span>　👆 <span id="winMoves"></span>かい</div>
+    <div class="win-buttons">
+      <button class="btn-action btn-shuffle" id="btnWinShuffle">もう一回 🔀</button>
+      <button class="btn-action btn-reset" id="btnWinTitle">タイトルへ</button>
+    </div>
+  </div>
+  <div class="confetti-layer" id="confettiLayer"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ─── 色設定（実際のルービックキューブ配色） ─── */
+  const COLORS = {
+    '1,0,0':  '#ef4444', // 右 赤
+    '-1,0,0': '#fb923c', // 左 オレンジ
+    '0,1,0':  '#fde047', // 下 黄
+    '0,-1,0': '#f8fafc', // 上 白
+    '0,0,1':  '#22c55e', // 前 緑
+    '0,0,-1': '#3b82f6', // 後 青
+    plastic:  '#2b2b3d'
+  };
+
+  /* 各面の固定ローカル法線と配置トランスフォーム */
+  const FACES = [
+    { key: '1,0,0',  make: h => `rotateY(90deg) translateZ(${h}px)` },
+    { key: '-1,0,0', make: h => `rotateY(-90deg) translateZ(${h}px)` },
+    { key: '0,1,0',  make: h => `rotateX(-90deg) translateZ(${h}px)` },
+    { key: '0,-1,0', make: h => `rotateX(90deg) translateZ(${h}px)` },
+    { key: '0,0,1',  make: h => `translateZ(${h}px)` },
+    { key: '0,0,-1', make: h => `rotateY(180deg) translateZ(${h}px)` },
+  ];
+
+  /* ─── 3x3 行列ユーティリティ（軸: 0=x,1=y,2=z） ─── */
+  function identity(){ return [[1,0,0],[0,1,0],[0,0,1]]; }
+  function matMul(A,B){
+    const R = [[0,0,0],[0,0,0],[0,0,0]];
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+      let s=0; for(let k=0;k<3;k++) s += A[i][k]*B[k][j];
+      R[i][j]=s;
+    }
+    return R;
+  }
+  function matVec(M,v){
+    return [
+      M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2],
+      M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2],
+      M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2],
+    ];
+  }
+  function transpose(M){
+    return [[M[0][0],M[1][0],M[2][0]],[M[0][1],M[1][1],M[2][1]],[M[0][2],M[1][2],M[2][2]]];
+  }
+  function rotMat(axis, deg){
+    const r = deg*Math.PI/180;
+    const c = Math.round(Math.cos(r)), s = Math.round(Math.sin(r));
+    if(axis===0) return [[1,0,0],[0,c,-s],[0,s,c]];
+    if(axis===1) return [[c,0,s],[0,1,0],[-s,0,c]];
+    return [[c,-s,0],[s,c,0],[0,0,1]];
+  }
+  function cross(a,b){
+    return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  }
+  function matrix3dCss(m){
+    return `matrix3d(${m[0][0]},${m[1][0]},${m[2][0]},0, ${m[0][1]},${m[1][1]},${m[2][1]},0, ${m[0][2]},${m[1][2]},${m[2][2]},0, 0,0,0,1)`;
+  }
+
+  /* ─── DOM 参照 ─── */
+  const screenTitle = document.getElementById('screen-title');
+  const screenGame  = document.getElementById('screen-game');
+  const sceneEl = document.getElementById('cube-scene');
+  const groupEl = document.getElementById('cube-group');
+  const timeLabel = document.getElementById('timeLabel');
+  const moveLabel = document.getElementById('moveLabel');
+  const winOverlay = document.getElementById('winOverlay');
+  const winTime = document.getElementById('winTime');
+  const winMoves = document.getElementById('winMoves');
+  const confettiLayer = document.getElementById('confettiLayer');
+
+  /* ─── 状態 ─── */
+  let N = 3;
+  let coords = [];
+  let SPACING = 70, CUBE = 64;
+  let cubies = [];
+  let viewRx = -25, viewRy = 35;
+  let animating = false;
+  let moveCount = 0;
+  let timerStarted = false;
+  let startTime = 0;
+  let timerInterval = null;
+
+  /* ─── キューブ構築 ─── */
+  function buildCube(n){
+    N = n;
+    coords = [];
+    for(let i=0;i<N;i++) coords.push(i - (N-1)/2);
+    const min = coords[0], max = coords[coords.length-1];
+
+    cubies = [];
+    for(const x of coords) for(const y of coords) for(const z of coords){
+      const pos = [x,y,z];
+      const baseColors = {};
+      for(const f of FACES){
+        const [nx,ny,nz] = f.key.split(',').map(Number);
+        let exterior = false;
+        if(nx===1 && x===max) exterior = true;
+        if(nx===-1 && x===min) exterior = true;
+        if(ny===1 && y===max) exterior = true;
+        if(ny===-1 && y===min) exterior = true;
+        if(nz===1 && z===max) exterior = true;
+        if(nz===-1 && z===min) exterior = true;
+        baseColors[f.key] = exterior ? COLORS[f.key] : COLORS.plastic;
+      }
+      cubies.push({ pos, orient: identity(), baseColors, el: null });
+    }
+    renderDom();
+    applyViewTransform();
+  }
+
+  function computeSizes(){
+    const rect = sceneEl.getBoundingClientRect();
+    const w = rect.width  || window.innerWidth;
+    const h = rect.height || window.innerHeight * 0.5;
+    const base = Math.min(w, h);
+    SPACING = Math.floor(Math.min(95, (base*0.85) / N));
+    CUBE = SPACING - 6;
+  }
+
+  function renderDom(){
+    computeSizes();
+    groupEl.innerHTML = '';
+    cubies.forEach(buildCubieDom);
+  }
+
+  function buildCubieDom(cubie){
+    const el = document.createElement('div');
+    el.className = 'cubie';
+    el.style.width = CUBE + 'px';
+    el.style.height = CUBE + 'px';
+    el.style.marginLeft = (-CUBE/2) + 'px';
+    el.style.marginTop = (-CUBE/2) + 'px';
+    const half = CUBE/2;
+    for(const f of FACES){
+      const faceEl = document.createElement('div');
+      faceEl.className = 'face';
+      faceEl.style.width = CUBE + 'px';
+      faceEl.style.height = CUBE + 'px';
+      faceEl.style.background = cubie.baseColors[f.key];
+      faceEl.style.transform = f.make(half);
+      faceEl.dataset.normal = f.key;
+      faceEl.cubie = cubie;
+      el.appendChild(faceEl);
+    }
+    cubie.el = el;
+    groupEl.appendChild(el);
+    updateCubieTransform(cubie);
+  }
+
+  function updateCubieTransform(cubie){
+    const [x,y,z] = cubie.pos;
+    cubie.el.style.transform =
+      `translate3d(${x*SPACING}px, ${y*SPACING}px, ${z*SPACING}px) ${matrix3dCss(cubie.orient)}`;
+  }
+
+  function applyViewTransform(){
+    groupEl.style.transform = `rotateX(${viewRx}deg) rotateY(${viewRy}deg)`;
+  }
+
+  /* ─── レイヤー回転 ─── */
+  function rotateLayer(axisIdx, layerCoord, angleDeg, animate, cb){
+    const R = rotMat(axisIdx, angleDeg);
+    const affected = cubies.filter(c => Math.abs(c.pos[axisIdx]-layerCoord) < 0.001);
+
+    if(!animate){
+      affected.forEach(c=>{
+        c.pos = matVec(R, c.pos);
+        c.orient = matMul(R, c.orient);
+        updateCubieTransform(c);
+      });
+      cb && cb();
+      return;
+    }
+
+    const rotor = document.createElement('div');
+    rotor.className = 'rotor';
+    rotor.style.transform = matrix3dCss(identity());
+    groupEl.appendChild(rotor);
+    affected.forEach(c => rotor.appendChild(c.el));
+
+    requestAnimationFrame(()=>{
+      rotor.style.transition = 'transform 0.26s cubic-bezier(.25,.8,.4,1)';
+      rotor.style.transform = matrix3dCss(R);
+    });
+
+    rotor.addEventListener('transitionend', function done(){
+      rotor.removeEventListener('transitionend', done);
+      affected.forEach(c=>{
+        c.pos = matVec(R, c.pos);
+        c.orient = matMul(R, c.orient);
+        updateCubieTransform(c);
+        groupEl.appendChild(c.el);
+      });
+      rotor.remove();
+      cb && cb();
+    }, { once: true });
+  }
+
+  /* ─── 完成判定 ─── */
+  function isSolved(){
+    const min = coords[0], max = coords[coords.length-1];
+    const dirs = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    for(const d of dirs){
+      const axis = d.findIndex(v=>v!==0);
+      const target = d[axis] > 0 ? max : min;
+      const relevant = cubies.filter(c => Math.abs(c.pos[axis]-target) < 0.001);
+      let first = null;
+      for(const c of relevant){
+        const localDir = matVec(transpose(c.orient), d).map(v=>Math.round(v));
+        const color = c.baseColors[localDir.join(',')];
+        if(first === null) first = color;
+        else if(color !== first) return false;
+      }
+    }
+    return true;
+  }
+
+  /* ─── 操作: 視点回転 / レイヤー回転の判定 ─── */
+  let dragMode = null;
+  let startX = 0, startY = 0;
+  let activeCubie = null, activeNormal = null;
+
+  sceneEl.addEventListener('pointerdown', e=>{
+    if(animating) return;
+    startX = e.clientX; startY = e.clientY;
+    const faceEl = e.target.closest('.face');
+    if(faceEl){
+      dragMode = 'layer';
+      activeCubie = faceEl.cubie;
+      activeNormal = faceEl.dataset.normal.split(',').map(Number);
+    } else {
+      dragMode = 'view';
+    }
+    sceneEl.setPointerCapture(e.pointerId);
+  });
+
+  sceneEl.addEventListener('pointermove', e=>{
+    if(dragMode === 'view'){
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      viewRy += dx * 0.4;
+      viewRx -= dy * 0.4;
+      startX = e.clientX; startY = e.clientY;
+      applyViewTransform();
+    }
+  });
+
+  sceneEl.addEventListener('pointerup', e=>{
+    if(dragMode === 'layer' && !animating){
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if(Math.hypot(dx,dy) > 15){
+        tryLayerRotation(activeCubie, activeNormal, dx, dy);
+      }
+    }
+    dragMode = null; activeCubie = null; activeNormal = null;
+  });
+
+  sceneEl.addEventListener('pointercancel', ()=>{
+    dragMode = null; activeCubie = null; activeNormal = null;
+  });
+
+  function tryLayerRotation(cubie, localNormal, dx, dy){
+    const worldNormal = matVec(cubie.orient, localNormal).map(v=>Math.round(v));
+    const normalAxis = worldNormal.findIndex(v=>v!==0);
+    const inPlane = [0,1,2].filter(i=>i!==normalAxis);
+
+    const viewM = matMul(rotMat(0, viewRx), rotMat(1, viewRy));
+    const proj = idx => {
+      const e = [0,0,0]; e[idx] = 1;
+      const p = matVec(viewM, e);
+      return [p[0], p[1]];
+    };
+    const dotv = (a,b) => a[0]*b[0]+a[1]*b[1];
+    const normv = a => Math.hypot(a[0],a[1]) || 1e-9;
+
+    const p0 = proj(inPlane[0]), p1 = proj(inPlane[1]);
+    const swipe = [dx,dy];
+    const score0 = Math.abs(dotv(p0,swipe)) / (normv(p0)*normv(swipe));
+    const score1 = Math.abs(dotv(p1,swipe)) / (normv(p1)*normv(swipe));
+    const axisRot = score0 >= score1 ? inPlane[1] : inPlane[0];
+
+    const axisVec = [0,0,0]; axisVec[axisRot] = 1;
+    const P = [
+      cubie.pos[0] + worldNormal[0]*0.5,
+      cubie.pos[1] + worldNormal[1]*0.5,
+      cubie.pos[2] + worldNormal[2]*0.5,
+    ];
+    const vel = cross(axisVec, P);
+    const velScreen = matVec(viewM, vel);
+    const sign = dotv([velScreen[0],velScreen[1]], swipe) >= 0 ? 1 : -1;
+    const angle = sign * 90;
+    const layerCoord = cubie.pos[axisRot];
+
+    animating = true;
+    rotateLayer(axisRot, layerCoord, angle, true, ()=>{
+      animating = false;
+      onMoveComplete();
+    });
+  }
+
+  /* ─── 手数 / タイマー ─── */
+  function onMoveComplete(){
+    moveCount++;
+    moveLabel.textContent = moveCount;
+    if(!timerStarted){
+      timerStarted = true;
+      startTimer();
+    }
+    if(isSolved()){
+      stopTimer();
+      showWin();
+    }
+  }
+
+  function startTimer(){
+    startTime = Date.now();
+    timerInterval = setInterval(updateTimerLabel, 250);
+  }
+  function stopTimer(){
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+  }
+  function updateTimerLabel(){
+    const elapsed = Math.floor((Date.now()-startTime)/1000);
+    const m = Math.floor(elapsed/60), s = elapsed%60;
+    timeLabel.textContent = `${m}:${String(s).padStart(2,'0')}`;
+  }
+  function resetStats(){
+    moveCount = 0;
+    moveLabel.textContent = '0';
+    timeLabel.textContent = '0:00';
+    timerStarted = false;
+    stopTimer();
+  }
+
+  /* ─── シャッフル / リセット ─── */
+  function shuffle(){
+    if(animating) return;
+    for(let i=0;i<20;i++){
+      const axis = Math.floor(Math.random()*3);
+      const layerCoord = coords[Math.floor(Math.random()*N)];
+      const angle = Math.random() < 0.5 ? 90 : -90;
+      rotateLayer(axis, layerCoord, angle, false);
+    }
+    resetStats();
+  }
+
+  function resetCube(){
+    if(animating) return;
+    buildCube(N);
+    resetStats();
+  }
+
+  /* ─── 完成演出 ─── */
+  function showWin(){
+    winTime.textContent = timeLabel.textContent;
+    winMoves.textContent = moveCount;
+    winOverlay.classList.remove('hidden');
+    spawnConfetti();
+  }
+  function spawnConfetti(){
+    confettiLayer.innerHTML = '';
+    const emojis = ['🎉','⭐','🌈','✨','🎊','🟥','🟦','🟨','🟩','🟧','🟪'];
+    for(let i=0;i<18;i++){
+      const span = document.createElement('span');
+      span.className = 'confetti';
+      span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      span.style.left = Math.random()*100 + '%';
+      span.style.animationDuration = (1.6 + Math.random()*1.2) + 's';
+      span.style.animationDelay = (Math.random()*0.4) + 's';
+      confettiLayer.appendChild(span);
+    }
+  }
+
+  /* ─── 画面遷移 ─── */
+  let selectedSize = 3;
+  document.querySelectorAll('.btn-size').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.btn-size').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedSize = Number(btn.dataset.size);
+    });
+  });
+
+  document.getElementById('btnStart').addEventListener('click', ()=>{
+    screenTitle.classList.add('hidden');
+    screenGame.classList.remove('hidden');
+    viewRx = -25; viewRy = 35;
+    buildCube(selectedSize);
+    resetStats();
+  });
+
+  document.getElementById('btnBack').addEventListener('click', ()=>{
+    screenGame.classList.add('hidden');
+    screenTitle.classList.remove('hidden');
+    stopTimer();
+  });
+
+  document.getElementById('btnShuffle').addEventListener('click', shuffle);
+  document.getElementById('btnReset').addEventListener('click', resetCube);
+
+  document.getElementById('btnWinShuffle').addEventListener('click', ()=>{
+    winOverlay.classList.add('hidden');
+    shuffle();
+  });
+  document.getElementById('btnWinTitle').addEventListener('click', ()=>{
+    winOverlay.classList.add('hidden');
+    screenGame.classList.add('hidden');
+    screenTitle.classList.remove('hidden');
+    stopTimer();
+  });
+
+  /* ─── リサイズ対応 ─── */
+  window.addEventListener('resize', ()=>{
+    if(cubies.length && !animating) renderDom();
+  });
+})();
+</script>
+</body>
+</html>
